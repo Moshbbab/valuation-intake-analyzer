@@ -3,10 +3,13 @@
 import sys
 import os
 
-# Make sure the engine module is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from engine.intake_analyzer import parse_intake, generate_report, extract_field
+from engine.intake_analyzer import (  # noqa: E402
+    parse_intake,
+    generate_report,
+    extract_field,
+)
 
 
 def test_parse_intake_all_fields_present():
@@ -35,10 +38,13 @@ def test_parse_intake_missing_fields():
     assert result["valuation_purpose"]["value"] == "Not stated"
 
 
-def test_readiness_not_ready_when_all_missing():
+def test_readiness_when_all_missing():
     """Readiness is Partially Ready or Not Ready when fields are missing."""
     result = parse_intake("No fields here.")
-    assert result["readiness_assessment"]["value"] in ("Partially Ready", "Not Ready")
+    assert result["readiness_assessment"]["value"] in (
+        "Partially Ready",
+        "Not Ready",
+    )
 
 
 def test_readiness_ready_when_all_present():
@@ -60,12 +66,14 @@ def test_generate_report_flattens_data():
     data = parse_intake(sample)
     report = generate_report(data)
     assert isinstance(report, dict)
-    for v in report.values():
-        assert isinstance(v, str)
+    for val in report.values():
+        assert isinstance(val, str)
 
 
 def test_extract_field_no_match():
     """extract_field returns empty strings when no pattern matches."""
-    value, evidence = extract_field([r"nonexistent[:\s]+(?P<value>[^\n]+)"], "hello world")
+    value, evidence = extract_field(
+        [r"nonexistent[:\s]+(?P<value>[^\n]+)"], "hello world"
+    )
     assert value == ""
     assert evidence == ""
