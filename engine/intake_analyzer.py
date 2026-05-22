@@ -8,15 +8,15 @@ any assumptions about value or pricing.
 Key design principles:
   Transparency: each piece of information is either extracted directly
     from the source or marked as missing.
-  Separation of concerns: text parsing, field extraction, risk assessment,
-    and report assembly are kept in distinct functions to facilitate unit
-    testing and future expansion.
+  Separation of concerns: text parsing, field extraction, risk
+    assessment, and report assembly are kept in distinct functions
+    to facilitate unit testing and future expansion.
   Extensibility: the simple heuristics can be replaced by more
     sophisticated NLP pipelines in future iterations without affecting
     the Streamlit UI.
 
-This module does not depend on Streamlit and can be imported into other
-contexts (e.g. command-line scripts or tests).
+This module does not depend on Streamlit and can be imported into
+other contexts (e.g. command-line scripts or tests).
 """
 
 import os
@@ -45,7 +45,7 @@ def read_pdf(path: str) -> str:
             for page in reader.pages:
                 page_text = page.extract_text() or ""
                 text_parts.append(page_text)
-    except Exception:
+    except OSError:
         pass
     return " ".join(text_parts)
 
@@ -56,7 +56,7 @@ def read_docx(path: str) -> str:
         return ""
     try:
         doc = Document(path)
-    except Exception:
+    except OSError:
         return ""
     paragraphs = [p.text for p in doc.paragraphs]
     return "\n".join(paragraphs)
@@ -68,7 +68,7 @@ def read_plain(path: str) -> str:
         try:
             with open(path, "r", encoding=encoding) as f:
                 return f.read()
-        except Exception:
+        except OSError:
             continue
     return ""
 
@@ -79,16 +79,15 @@ def read_file(path: str) -> str:
     ext = ext.lower()
     if ext == ".pdf":
         return read_pdf(path)
-    elif ext in (".docx",):
+    if ext in (".docx",):
         return read_docx(path)
-    else:
-        return read_plain(path)
+    return read_plain(path)
 
 
 def extract_field(
     patterns: List[str], text: str
 ) -> Tuple[str, str]:
-    """Search for the first occurrence of any pattern and return the captured value."""
+    """Search for the first pattern match and return the captured value."""
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
         if match:
@@ -97,12 +96,12 @@ def extract_field(
     return "", ""
 
 
-def parse_intake(text: str) -> Dict[str, Dict[str, str]]:
-    """Parse the intake text and return a structured dictionary with extracted fields."""
-    result: Dict[str, Dict[str, str]] = {}
-
-    patterns_map: Dict[str, List[str]] = {
-        "property_type": [r"property[\s_-]*type[:\s]+(?P<value>[^\n]+)"],
+def _build_patterns_map() -> Dict[str, List[str]]:
+    """Return the regex patterns used to extract each intake field."""
+    return {
+        "property_type": [
+            r"property[\s_-]*type[:\s]+(?P<value>[^\n]+)",
+        ],
         "property_location": [
             r"property[\s_-]*location[:\s]+(?P<value>[^\n]+)",
             r"location[:\s]+(?P<value>[^\n]+)",
@@ -121,63 +120,89 @@ def parse_intake(text: str) -> Dict[str, Dict[str, str]]:
         ],
     }
 
-    for field, patterns in patterns_map.items():
-        value, evidence = extract_field(patterns, text)
-        if value:
-            result[field] = {"value": value, "evidence": evidence}
-        else:
-            result[field] = {"value": "Not stated", "evidence": ""}
 
-    # Documents section
+def _extract_documents(text: str) -> Dict[str, str]:
+    """Extract available documents section from text."""
     documents_section = re.search(
         r"documents[\s\S]*?provided[^:\n]*:?([\s\S]*?)(?:\n\n|$)",
-        text, re.IGNORECASE
+        text,
+        re.IGNORECASE,
     )
     documents: List[str] = []
+    evidence = ""
     if documents_section:
-        raw_section = documents_section.group(1).split("\n", 10)
         for item in re.split(r"[,;\n]", documents_section.group(0)):
             cleaned = item.strip(" -\t")
             if cleaned:
                 documents.append(cleaned)
-    result["available_documents"] = {
+        evidence = documents_section.group(0).split("\n", 10)[0].strip()
+    return {
         "value": ", ".join(documents) if documents else "None stated",
-        "evidence": documents_section.group(0).split("\n", 10)[0].strip() if documents_section else "",
+        "evidence": evidence,
     }
 
-    # Missing documents
-    missing_match = re.search(r"missing[\s_-]*documents?[:\s]+(?P<value>[^\n]+)", text, re.IGNORECASE)
+
+def _extract_missing_documents(text: str) -> Dict[str, str]:
+    """Extract the missing documents field from text."""
+    missing_match = re.search(
+        r"missing[\s_-]*documents?[:\s]+(?P<value>[^\n]+)",
+        text,
+        re.IGNORECASE,
+    )
     if missing_match:
-        missing_docs = [d.strip() for d in re.split(r"[,;]", missing_match.group("value")) if d.strip()]
-        missing_value = ", ".join(missing_docs)
-        missing_evidence = missing_match.group(0).strip()
-    else:
-        missing_value = "None stated"
-        missing_evidence = ""
-    result["missing_documents"] = {"value": missing_value, "evidence": missing_evidence}
+        missing_docs = [
+            d.strip()
+            for d in re.split(r"[,;]", missing_match.group("value"))
+            if d.strip()
+        ]
+        return {
+            "value": ", ".join(missing_docs),
+            "evidence": missing_match.group(0).strip(),
+        }
+    return {"value": "None stated", "evidence": ""}
 
-    # Assumptions
-    assumptions: List[str] = []
-    for match in re.finditer(r"assumptions?[:\s]+(?P<value>[^\n]+)", text, re.IGNORECASE):
-        assumptions.append(match.group("value").strip())
-    result["initial_assumptions"] = {
+
+def _extract_assumptions(text: str) -> Dict[str, str]:
+    """Extract initial assumptions from text."""
+    pattern = r"assumptions?[:\s]+(?P<value>[^\n]+)"
+    assumptions = [
+        m.group("value").strip()
+        for m in re.finditer(pattern, text, re.IGNORECASE)
+    ]
+    evidence = "; ".join(
+        m.group(0).strip()
+        for m in re.finditer(pattern, text, re.IGNORECASE)
+    )
+    return {
         "value": "; ".join(assumptions) if assumptions else "None stated",
-        "evidence": "; ".join(m.group(0).strip() for m in re.finditer(r"assumptions?[:\s]+(?P<value>[^\n]+)", text, re.IGNORECASE)),
+        "evidence": evidence,
     }
 
-    # Risk flags
-    risk_flags: List[str] = []
-    for field in ("property_type", "property_location", "valuation_purpose", "basis_of_value", "valuation_date"):
-        if result[field]["value"] == "Not stated":
-            risk_flags.append(f"{field.replace('_', ' ').title()} missing")
+
+def _compute_risk_and_readiness(
+    result: Dict[str, Dict[str, str]]
+) -> Dict[str, Dict[str, str]]:
+    """Derive risk flags and readiness from the extracted fields."""
+    core_fields = (
+        "property_type",
+        "property_location",
+        "valuation_purpose",
+        "basis_of_value",
+        "valuation_date",
+    )
+    risk_flags: List[str] = [
+        f"{f.replace('_', ' ').title()} missing"
+        for f in core_fields
+        if result[f]["value"] == "Not stated"
+    ]
     if result["missing_documents"]["value"] != "None stated":
         risk_flags.append("Missing documents listed")
+
     result["initial_risk_flags"] = {
         "value": "; ".join(risk_flags) if risk_flags else "None",
         "evidence": "risk flags are derived, not directly evidenced",
     }
 
-    # Readiness assessment
     if not risk_flags:
         readiness = "Ready"
     elif any(flag.endswith("missing") for flag in risk_flags):
@@ -188,7 +213,29 @@ def parse_intake(text: str) -> Dict[str, Dict[str, str]]:
         "value": readiness,
         "evidence": "Derived from missing fields and documents",
     }
+    return result
 
+
+def parse_intake(text: str) -> Dict[str, Dict[str, str]]:
+    """Parse the intake text and return a structured dictionary.
+
+    Returns a dictionary keyed by field name. Each field contains
+    sub-keys 'value' and 'evidence'. Missing fields have value
+    'Not stated'.
+    """
+    result: Dict[str, Dict[str, str]] = {}
+
+    for field, patterns in _build_patterns_map().items():
+        value, evidence = extract_field(patterns, text)
+        if value:
+            result[field] = {"value": value, "evidence": evidence}
+        else:
+            result[field] = {"value": "Not stated", "evidence": ""}
+
+    result["available_documents"] = _extract_documents(text)
+    result["missing_documents"] = _extract_missing_documents(text)
+    result["initial_assumptions"] = _extract_assumptions(text)
+    result = _compute_risk_and_readiness(result)
     return result
 
 
