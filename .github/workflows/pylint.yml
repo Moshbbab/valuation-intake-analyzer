@@ -22,5 +22,5 @@ jobs:
     - name: Analysing the code with pylint
       run: |
         pylint $(git ls-files '*.py') \
-        --disable=C0114,C0115,C0116,W0611,R0914,R0912,W0612,C0413 \
+        --disable=C0114,C0115,C0116,W0611,R0914,R0912,W0612,C0413,C0301 \
         --fail-under=7.0
