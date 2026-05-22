@@ -4,8 +4,8 @@ This script provides a minimal user interface for uploading valuation
 request documents, running the intake analysis, and viewing the results.
 """
 
-import os
 import json
+import os
 import tempfile
 from typing import Optional
 
@@ -21,22 +21,45 @@ def save_uploaded_file(uploaded_file) -> Optional[str]:
         return None
 
     uploads_dir = os.path.join(os.path.dirname(__file__), "..", "uploads")
-    os.makedirs(uploads_dir, exist_ok=True)  # Ensure uploads directory exists
+    os.makedirs(uploads_dir, exist_ok=True)
 
     suffix = os.path.splitext(uploaded_file.name)[1]
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=uploads_dir) as tmp:
+    with tempfile.NamedTemporaryFile(
+        delete=False, suffix=suffix, dir=uploads_dir
+    ) as tmp:
         tmp.write(uploaded_file.getbuffer())
         return tmp.name
 
 
+def render_intake_summary(data: dict, report: dict) -> None:
+    """Render the structured intake summary and detailed evidence."""
+    st.subheader("Structured Intake Summary")
+    df = pd.DataFrame(
+        [report],
+        columns=list(report.keys()),
+    )
+    st.table(df)
+
+    st.subheader("Detailed Evidence and Notes")
+    for field, info in data.items():
+        with st.expander(field.replace("_", " ").title()):
+            st.write("**Value:**", info["value"])
+            if info.get("evidence"):
+                st.write("**Evidence:**", info["evidence"])
+            else:
+                st.write("_No direct evidence — value inferred or not stated._")
+
+
 def main() -> None:
+    """Run the Streamlit application."""
     st.set_page_config(page_title="Valuation Intake Analyzer", layout="wide")
     st.title("Valuation Intake Analyzer")
     st.markdown(
-        "Upload a valuation request (PDF, Word document, or plain text) and this tool "
-        "will extract key intake information and highlight missing elements. "
-        "It does not provide valuation opinions or pricing — it purely assesses "
-        "document completeness and initial risk."
+        "Upload a valuation request (PDF, Word document, or plain text) "
+        "and this tool will extract key intake information and highlight "
+        "missing elements. It does not provide valuation opinions or "
+        "pricing \u2014 it purely assesses document completeness and "
+        "initial risk."
     )
 
     uploaded_file = st.file_uploader(
@@ -55,34 +78,15 @@ def main() -> None:
             raw_text = read_file(filepath)
             if not raw_text.strip():
                 st.warning(
-                    "Unable to extract text from the file. Please check the file format."
+                    "Unable to extract text from the file. "
+                    "Please check the file format."
                 )
                 return
 
             data = parse_intake(raw_text)
             report = generate_report(data)
 
-        st.subheader("Structured Intake Summary")
-        # Use a named temporary file in the uploads directory
-        df = pd.DataFrame(
-            report,
-            columns=[
-                "property_type", "property_location", "valuation_purpose",
-                "basis_of_value", "valuation_date", "available_documents",
-                "missing_documents", "initial_assumptions", "initial_risk_flags",
-                "readiness_assessment",
-            ],
-        )
-        st.table(df)
-
-        st.subheader("Detailed Evidence and Notes")
-        for field, info in data.items():
-            with st.expander(field.replace("_", " ").title()):
-                st.write("Value", info["value"], type_ignore=True)
-                if info.get("evidence"):
-                    st.write("Evidence", info["evidence"], type_ignore=True)
-                else:
-                    st.write("No direct evidence — value inferred or not stated.")
+        render_intake_summary(data, report)
 
         json_data = json.dumps(report, indent=2)
         st.download_button(
