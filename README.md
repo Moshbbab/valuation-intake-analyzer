@@ -2,7 +2,7 @@
 
 [![Pylint](https://github.com/Moshbbab/valuation-intake-analyzer/actions/workflows/pylint.yml/badge.svg)](https://github.com/Moshbbab/valuation-intake-analyzer/actions/workflows/pylint.yml)
 [![Python application](https://github.com/Moshbbab/valuation-intake-analyzer/actions/workflows/python-app.yml/badge.svg)](https://github.com/Moshbbab/valuation-intake-analyzer/actions/workflows/python-app.yml)
-
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://valuation-intake-analyzer-5ukbupsiaqgskwbd5fmcdu.streamlit.app/)
 A minimal internal tool designed to help real estate valuation teams quickly assess the completeness of incoming valuation requests.
 
 The application accepts simple files such as PDFs, Word documents, or plain text and extracts key intake information to produce a structured readiness and risk summary. It focuses strictly on intake analysis and **does not perform any valuation calculations or pricing**.
