@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hvos.local/contracts/audit-event.schema.json",
+  "title": "AuditEvent",
+  "description": "An append-only audit event in the HVOS Audit Trail. Deliberately non-rigid: entity_type and action are plain strings here (no enum) and are validated only against an injectable vocabulary in engine.audit.config. before/after are free-form snapshots (either may be null). additionalProperties is allowed so producers can attach extra context without a schema change. The contract carries no valuation math and enforces no workflow.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "entity_type",
+    "entity_id",
+    "action",
+    "timestamp"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Stable identifier. Auto-generated on record when not supplied."
+    },
+    "entity_type": {
+      "type": "string",
+      "description": "Kind of entity the event concerns (e.g. assumption, comparable). Validated against injectable config, not a fixed enum."
+    },
+    "entity_id": {
+      "type": ["string", "null"],
+      "description": "The entity's own identifier (e.g. assumption_id, comparable_id)."
+    },
+    "action": {
+      "type": "string",
+      "description": "What happened (e.g. created, overridden, assessed, inclusion_recommended). Validated against injectable config, not a fixed enum."
+    },
+    "actor": {
+      "type": ["string", "null"],
+      "description": "Who performed the action; null for system/automated events."
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "ISO-8601 timestamp. Auto-generated when not supplied."
+    },
+    "before": {
+      "description": "Snapshot of the prior state. Null when none (e.g. creation).",
+      "type": ["object", "array", "string", "number", "boolean", "null"]
+    },
+    "after": {
+      "description": "Snapshot of the new state. Null when not applicable.",
+      "type": ["object", "array", "string", "number", "boolean", "null"]
+    },
+    "rationale": {
+      "type": ["string", "null"],
+      "description": "Why the action was taken, carried from the source entity."
+    },
+    "explanation": {
+      "description": "Human-readable breakdown carried from the source entity (list of lines).",
+      "type": ["array", "null"],
+      "items": { "type": "string" }
+    }
+  }
+}
