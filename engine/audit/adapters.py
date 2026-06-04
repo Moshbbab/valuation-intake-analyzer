@@ -84,3 +84,41 @@ def record_inclusion_recommendation(comparable: Mapping, decision: Mapping, *,
         actor=decision.get("actor"),
         store=store, config=config,
     )
+
+
+def record_adjustment_created(adjustment: Mapping, *,
+                              store: Any = None,
+                              config: Any = None,
+                              actor: Optional[str] = None) -> Dict:
+    """Map a ``create_adjustment()`` output to an 'adjustment created' event."""
+    return record_event(
+        "adjustment", adjustment.get("adjustment_id"), "created",
+        before=None,
+        after=dict(adjustment),
+        rationale=adjustment.get("rationale"),
+        actor=actor or adjustment.get("actor"),
+        store=store, config=config,
+    )
+
+
+def record_adjustment_overridden(adjustment: Mapping, *,
+                                 store: Any = None,
+                                 config: Any = None) -> Dict:
+    """Map an ``apply_override()`` output to an 'adjustment overridden' event.
+
+    ``before`` is the override's ``previous`` snapshot; ``after`` is the new
+    value of each changed field, taken from the ``changes`` diff.
+    """
+    override = adjustment.get("manual_override") or {}
+    changes = override.get("changes") or {}
+    after = {field: change.get("to") for field, change in changes.items()}
+    return record_event(
+        "adjustment", adjustment.get("adjustment_id"), "overridden",
+        before=override.get("previous"),
+        after=after,
+        rationale=override.get("rationale"),
+        explanation=override.get("explanation"),
+        actor=override.get("actor"),
+        timestamp=override.get("timestamp"),
+        store=store, config=config,
+    )

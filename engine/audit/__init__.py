@@ -11,6 +11,8 @@ from engine.audit.recorder import (
     record_event,
 )
 from engine.audit.adapters import (
+    record_adjustment_created,
+    record_adjustment_overridden,
     record_assumption_created,
     record_assumption_overridden,
     record_comparable_assessed,
@@ -29,6 +31,8 @@ __all__ = [
     "record_assumption_overridden",
     "record_comparable_assessed",
     "record_inclusion_recommendation",
+    "record_adjustment_created",
+    "record_adjustment_overridden",
     "InMemoryAuditStore",
     "JsonlAuditStore",
 ]

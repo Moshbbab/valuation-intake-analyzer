@@ -11,7 +11,7 @@ from typing import Tuple
 
 # Default vocabulary covering the four currently-wired event types. Replaceable
 # or extendable per engagement; an empty tuple disables validation.
-DEFAULT_ENTITY_TYPES: Tuple[str, ...] = ("assumption", "comparable")
+DEFAULT_ENTITY_TYPES: Tuple[str, ...] = ("assumption", "comparable", "adjustment")
 DEFAULT_ACTIONS: Tuple[str, ...] = (
     "created",
     "overridden",
