@@ -9,8 +9,10 @@ a final valuation opinion.
 from engine.valuation.config import (
     ComparableApproachConfig,
     DEFAULT_CONFIG,
+    DEFAULT_DIRECT_CAP_CONFIG,
     DEFAULT_NOI_CONFIG,
     DEFAULT_SIMILARITY_CONFIG,
+    DirectCapConfig,
     NOIConfig,
     SimilarityConfig,
 )
@@ -35,6 +37,12 @@ from engine.valuation.noi import (
     potential_gross_income,
     total_operating_expenses,
 )
+from engine.valuation.direct_capitalization import (
+    capitalize,
+    direct_capitalization,
+    sensitivity_grid,
+    value_from_cap_rate_range,
+)
 
 __all__ = [
     "ComparableApproachConfig",
@@ -43,6 +51,8 @@ __all__ = [
     "DEFAULT_SIMILARITY_CONFIG",
     "NOIConfig",
     "DEFAULT_NOI_CONFIG",
+    "DirectCapConfig",
+    "DEFAULT_DIRECT_CAP_CONFIG",
     "parse_adjustment_value",
     "apply_adjustment_to_rate",
     "adjusted_unit_rate",
@@ -58,4 +68,8 @@ __all__ = [
     "effective_gross_income",
     "total_operating_expenses",
     "build_noi",
+    "capitalize",
+    "value_from_cap_rate_range",
+    "sensitivity_grid",
+    "direct_capitalization",
 ]
