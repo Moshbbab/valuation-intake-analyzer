@@ -9,7 +9,9 @@ a final valuation opinion.
 from engine.valuation.config import (
     ComparableApproachConfig,
     DEFAULT_CONFIG,
+    DEFAULT_NOI_CONFIG,
     DEFAULT_SIMILARITY_CONFIG,
+    NOIConfig,
     SimilarityConfig,
 )
 from engine.valuation.comparable_approach import (
@@ -27,12 +29,20 @@ from engine.valuation.similarity import (
     score_similarity,
     similarity_weights,
 )
+from engine.valuation.noi import (
+    build_noi,
+    effective_gross_income,
+    potential_gross_income,
+    total_operating_expenses,
+)
 
 __all__ = [
     "ComparableApproachConfig",
     "DEFAULT_CONFIG",
     "SimilarityConfig",
     "DEFAULT_SIMILARITY_CONFIG",
+    "NOIConfig",
+    "DEFAULT_NOI_CONFIG",
     "parse_adjustment_value",
     "apply_adjustment_to_rate",
     "adjusted_unit_rate",
@@ -44,4 +54,8 @@ __all__ = [
     "similarity_weights",
     "confidence_contribution",
     "as_weighting_strategy",
+    "potential_gross_income",
+    "effective_gross_income",
+    "total_operating_expenses",
+    "build_noi",
 ]
