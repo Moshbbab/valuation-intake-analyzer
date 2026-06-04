@@ -79,3 +79,22 @@ class NOIConfig:
 
 # Convenience default instance.
 DEFAULT_NOI_CONFIG = NOIConfig()
+
+
+@dataclass(frozen=True)
+class DirectCapConfig:
+    """Configuration injected into the Direct Capitalization functions.
+
+    There is no cap rate here — cap rates are always caller-supplied. The config
+    carries only presentation/structural options: ``rounding`` and the
+    ``sort_range`` toggle for ordering a value range (lower cap rate yields a
+    higher value, so the range is sorted by default). No market default, no risk
+    premium, no growth/exit assumption is encoded.
+    """
+
+    rounding: Optional[int] = None
+    sort_range: bool = True
+
+
+# Convenience default instance.
+DEFAULT_DIRECT_CAP_CONFIG = DirectCapConfig()
