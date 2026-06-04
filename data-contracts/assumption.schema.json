@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hvos.local/contracts/assumption.schema.json",
+  "title": "Assumption",
+  "description": "A professional assumption in the HVOS Assumptions & Adjustments Foundation. Deliberately non-rigid: the allowed categories and confidence levels are NOT enumerated here — they come from injectable configuration (engine.assumptions.config) so engagements can extend them without a schema change. This contract carries no valuation math and forces no decision. manual_override records a professional-judgment change while preserving the prior value for later audit. additionalProperties is allowed so extra engagement-specific fields can travel with the assumption.",
+  "type": "object",
+  "required": [
+    "assumption_id",
+    "category",
+    "statement",
+    "basis",
+    "confidence_level",
+    "rationale",
+    "affected_method",
+    "sensitivity_link"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "assumption_id": {
+      "type": "string",
+      "description": "Stable identifier. Auto-generated on creation if not supplied."
+    },
+    "category": {
+      "type": "string",
+      "description": "Assumption category (e.g. general, special, extraordinary). Validated against injectable config, not a fixed enum here."
+    },
+    "statement": {
+      "type": "string",
+      "description": "The assumption itself, in plain language."
+    },
+    "basis": {
+      "type": "string",
+      "description": "What the assumption rests on (evidence, instruction, market practice)."
+    },
+    "confidence_level": {
+      "type": "string",
+      "description": "Stated confidence label (e.g. High/Medium/Low). Validated against injectable config, not a fixed enum here."
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Why this assumption is held. Required so the assumption is explainable and auditable."
+    },
+    "affected_method": {
+      "type": "string",
+      "description": "Which valuation method the assumption affects. A label only — this contract performs no valuation."
+    },
+    "sensitivity_link": {
+      "type": "string",
+      "description": "Reference linking the assumption to a sensitivity range/scenario. A pointer only; no math here."
+    },
+    "manual_override": {
+      "type": ["object", "null"],
+      "description": "Professional-judgment override. Records the change, the actor, the rationale and a snapshot of the prior value(s) so the original state is preserved for the audit trail.",
+      "additionalProperties": true,
+      "properties": {
+        "applied": { "type": "boolean" },
+        "actor": { "type": ["string", "null"] },
+        "rationale": { "type": "string" },
+        "changes": {
+          "type": "object",
+          "description": "Per-field {from, to} diff applied by the override.",
+          "additionalProperties": true
+        },
+        "previous": {
+          "type": "object",
+          "description": "Snapshot of the pre-override values for the changed fields.",
+          "additionalProperties": true
+        },
+        "timestamp": { "type": "string" },
+        "explanation": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["applied", "rationale", "changes", "previous"]
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Creation timestamp (ISO 8601)."
+    }
+  }
+}
