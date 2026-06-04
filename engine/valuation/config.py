@@ -58,3 +58,24 @@ class SimilarityConfig:
 
 # Convenience default instance (pure similarity; no reliability blend).
 DEFAULT_SIMILARITY_CONFIG = SimilarityConfig()
+
+
+@dataclass(frozen=True)
+class NOIConfig:
+    """Configuration injected into the NOI Builder.
+
+    ``aggregation`` controls how line-item amounts are summed — the built-in
+    name ``"sum"`` or a callable taking a list of amounts and returning a total.
+    ``amount_field``/``name_field`` are the keys read from each line-item dict,
+    so callers are not forced into fixed field names. There is no default
+    vacancy rate, no fixed expense ratio and no reserve rule here.
+    """
+
+    aggregation: Union[str, Callable] = "sum"
+    amount_field: str = "amount"
+    name_field: str = "name"
+    rounding: Optional[int] = None
+
+
+# Convenience default instance.
+DEFAULT_NOI_CONFIG = NOIConfig()
