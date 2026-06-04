@@ -6,10 +6,14 @@ manual-override mechanism — i.e. the "avoid rigid systems" guarantees, not jus
 the happy path.
 """
 
+import sys
+import os
 from datetime import date, timedelta
 
-from engine.evidence import config as cfg
-from engine.evidence.scoring import (
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from engine.evidence import config as cfg  # noqa: E402
+from engine.evidence.scoring import (  # noqa: E402
     assess_comparable,
     decide_inclusion,
     score_evidence,
