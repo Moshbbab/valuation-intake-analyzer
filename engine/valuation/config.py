@@ -98,3 +98,21 @@ class DirectCapConfig:
 
 # Convenience default instance.
 DEFAULT_DIRECT_CAP_CONFIG = DirectCapConfig()
+
+
+@dataclass(frozen=True)
+class DCFConfig:
+    """Configuration injected into the DCF functions.
+
+    There is no discount rate, exit cap rate, growth rate or horizon here — all
+    are caller-supplied. The config carries only presentation/structural options
+    plus an optional ``discount_factor`` callable (rate, period) -> factor for an
+    alternative discounting convention. No market default or build-up is encoded.
+    """
+
+    rounding: Optional[int] = None
+    discount_factor: Optional[Callable] = None
+
+
+# Convenience default instance.
+DEFAULT_DCF_CONFIG = DCFConfig()

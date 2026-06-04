@@ -8,7 +8,9 @@ a final valuation opinion.
 
 from engine.valuation.config import (
     ComparableApproachConfig,
+    DCFConfig,
     DEFAULT_CONFIG,
+    DEFAULT_DCF_CONFIG,
     DEFAULT_DIRECT_CAP_CONFIG,
     DEFAULT_NOI_CONFIG,
     DEFAULT_SIMILARITY_CONFIG,
@@ -43,6 +45,13 @@ from engine.valuation.direct_capitalization import (
     sensitivity_grid,
     value_from_cap_rate_range,
 )
+from engine.valuation.dcf import (
+    dcf_sensitivity,
+    discount_factor,
+    discounted_cash_flow,
+    present_value,
+    reversion_value,
+)
 
 __all__ = [
     "ComparableApproachConfig",
@@ -53,6 +62,8 @@ __all__ = [
     "DEFAULT_NOI_CONFIG",
     "DirectCapConfig",
     "DEFAULT_DIRECT_CAP_CONFIG",
+    "DCFConfig",
+    "DEFAULT_DCF_CONFIG",
     "parse_adjustment_value",
     "apply_adjustment_to_rate",
     "adjusted_unit_rate",
@@ -72,4 +83,9 @@ __all__ = [
     "value_from_cap_rate_range",
     "sensitivity_grid",
     "direct_capitalization",
+    "discount_factor",
+    "present_value",
+    "reversion_value",
+    "discounted_cash_flow",
+    "dcf_sensitivity",
 ]
