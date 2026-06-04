@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hvos.local/contracts/adjustment.schema.json",
+  "title": "Adjustment",
+  "description": "A professional adjustment applied to a comparable in the HVOS Adjustment Foundation. Deliberately non-rigid: factor, direction and confidence_level are plain strings here (no enum); the allowed categories/levels come from injectable configuration (engine.adjustments.config), not from this contract. amount_or_range is free-form so an engagement may state a single figure, a range, a percentage or a qualitative note. This contract carries no valuation math, no percentage limits, and forces no decision. manual_override records a professional-judgment change while preserving the prior value for later audit. additionalProperties is allowed so extra engagement-specific fields can travel with the adjustment.",
+  "type": "object",
+  "required": [
+    "adjustment_id",
+    "comparable_id",
+    "factor",
+    "direction",
+    "amount_or_range",
+    "rationale",
+    "evidence_reference",
+    "confidence_level"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "adjustment_id": {
+      "type": "string",
+      "description": "Stable identifier. Auto-generated on creation if not supplied."
+    },
+    "comparable_id": {
+      "type": "string",
+      "description": "Identifier of the comparable this adjustment applies to."
+    },
+    "factor": {
+      "type": "string",
+      "description": "What is being adjusted for (e.g. location, time, size, condition). Validated against injectable config, not a fixed enum here."
+    },
+    "direction": {
+      "type": "string",
+      "description": "Direction of the adjustment (e.g. upward, downward, neutral). Validated against injectable config, not a fixed enum here."
+    },
+    "amount_or_range": {
+      "description": "The adjustment magnitude. Free-form: a number, a string range/percentage, or an object — no value math is performed here.",
+      "type": ["string", "number", "object", "null"]
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Why the adjustment is made. Required so the adjustment is explainable and auditable."
+    },
+    "evidence_reference": {
+      "type": "string",
+      "description": "Pointer to the supporting evidence (e.g. a comparable_id or evidence note). A reference only; no computation here."
+    },
+    "confidence_level": {
+      "type": "string",
+      "description": "Stated confidence label (e.g. High/Medium/Low). Validated against injectable config, not a fixed enum here."
+    },
+    "manual_override": {
+      "type": ["object", "null"],
+      "description": "Professional-judgment override. Records the change, the actor, the rationale and a snapshot of the prior value(s) so the original state is preserved for the audit trail.",
+      "additionalProperties": true,
+      "properties": {
+        "applied": { "type": "boolean" },
+        "actor": { "type": ["string", "null"] },
+        "rationale": { "type": "string" },
+        "changes": {
+          "type": "object",
+          "description": "Per-field {from, to} diff applied by the override.",
+          "additionalProperties": true
+        },
+        "previous": {
+          "type": "object",
+          "description": "Snapshot of the pre-override values for the changed fields.",
+          "additionalProperties": true
+        },
+        "timestamp": { "type": "string" },
+        "explanation": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["applied", "rationale", "changes", "previous"]
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Creation timestamp (ISO 8601)."
+    }
+  }
+}
