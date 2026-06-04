@@ -8,7 +8,7 @@ caps, no hard-coded weighting formula and no forced single-point conclusion.
 """
 
 from dataclasses import dataclass
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Mapping, Optional, Tuple, Union
 
 # Inclusion decisions that count toward the indicated value by default. Note
 # "review" is deliberately excluded so a review comparable is never auto-used.
@@ -29,3 +29,32 @@ class ComparableApproachConfig:
 
 # Convenience default instance.
 DEFAULT_CONFIG = ComparableApproachConfig()
+
+
+@dataclass(frozen=True)
+class SimilarityConfig:
+    """Configuration injected into the similarity / weighting-intelligence funcs.
+
+    Everything is injectable. ``scorers``/``dimensions``/``weights`` default to
+    None so the module supplies replaceable defaults; pass your own to extend or
+    replace them. ``aggregation`` and ``ranking`` accept a built-in name or a
+    callable.
+
+    ``blend_reliability`` is the only place evidence reliability may enter
+    weighting. It is disabled by default (None) — similarity and reliability are
+    distinct professional concepts and are not collapsed. When set to a fraction
+    in [0, 1] it is applied explicitly and reported by ``confidence_contribution``.
+    """
+
+    dimensions: Optional[Tuple[str, ...]] = None
+    scorers: Optional[Mapping] = None
+    weights: Optional[Mapping] = None
+    aggregation: Union[str, Callable] = "weighted_mean"
+    ranking: Union[str, Callable] = "similarity"
+    blend_reliability: Optional[float] = None
+    included_decisions: Tuple[str, ...] = DEFAULT_INCLUDED_DECISIONS
+    rounding: Optional[int] = None
+
+
+# Convenience default instance (pure similarity; no reliability blend).
+DEFAULT_SIMILARITY_CONFIG = SimilarityConfig()
