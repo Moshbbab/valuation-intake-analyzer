@@ -36,6 +36,33 @@
       "description": "The adjustment magnitude. Free-form: a number, a string range/percentage, or an object — no value math is performed here.",
       "type": ["string", "number", "object", "null"]
     },
+    "adjustment_value": {
+      "type": ["object", "null"],
+      "description": "Optional machine-readable magnitude used by the comparable-approach calculation support. Does NOT replace amount_or_range (the free-form professional note remains authoritative for narrative). When absent or malformed it is safely ignored by the calculation. type/direction are plain strings (no enum) so the vocabulary stays open.",
+      "additionalProperties": true,
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "One of percentage | absolute | range_percentage | range_absolute (interpreted by the calculation; not constrained by an enum here)."
+        },
+        "value": {
+          "description": "A number for percentage/absolute, or {low, high} for range_*.",
+          "type": ["number", "object"]
+        },
+        "unit": {
+          "type": ["string", "null"],
+          "description": "e.g. percent | SAR_per_sqm | SAR. Descriptive only."
+        },
+        "direction": {
+          "type": ["string", "null"],
+          "description": "upward | downward | neutral. Falls back to the adjustment's top-level direction when omitted."
+        },
+        "rationale": {
+          "type": ["string", "null"]
+        }
+      }
+    },
     "rationale": {
       "type": "string",
       "description": "Why the adjustment is made. Required so the adjustment is explainable and auditable."
