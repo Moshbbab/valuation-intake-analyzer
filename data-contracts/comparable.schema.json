@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hvos.local/contracts/comparable.schema.json",
+  "title": "Comparable",
+  "description": "A market comparable in the HVOS Evidence Registry. Deliberately non-rigid: scoring weights, thresholds and source-quality mappings live in engine.evidence.config (configurable at runtime), NOT in this contract. reliability_score and inclusion_decision may be produced by automated scoring or replaced by professional judgment via manual_override. additionalProperties is allowed so engagements can carry extra evidence fields without a schema change.",
+  "type": "object",
+  "required": ["comparable_id", "source"],
+  "additionalProperties": true,
+  "properties": {
+    "comparable_id": {
+      "type": "string",
+      "description": "Stable identifier for this piece of evidence."
+    },
+    "source": {
+      "type": "string",
+      "description": "Free-form source label (e.g. registry, broker, listing). Quality is mapped by a configurable lookup in engine.evidence.config, not hard-coded here."
+    },
+    "date": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "Transaction/observation date. Recency is scored with a configurable half-life."
+    },
+    "price": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "area": {
+      "type": ["number", "null"],
+      "exclusiveMinimum": 0
+    },
+    "unit_rate": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "location_score": {
+      "type": ["number", "null"],
+      "description": "Locational proximity/quality. Accepts 0..1 or 0..100; the scorer normalises it."
+    },
+    "reliability_score": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Computed by engine.evidence.scoring.score_evidence(). Overridable; never the sole authority."
+    },
+    "confidence_level": {
+      "type": ["string", "null"],
+      "enum": ["High", "Medium", "Low", null],
+      "description": "Banded confidence on reliability_score; band edges are configurable."
+    },
+    "inclusion_decision": {
+      "type": ["string", "null"],
+      "enum": ["include", "review", "exclude", null],
+      "description": "May be an automated decision against configurable thresholds, or a manual_override."
+    },
+    "manual_override": {
+      "type": ["object", "null"],
+      "description": "Professional-judgment override. When present it wins over the automated decision, but the automated decision is still recorded for the audit trail.",
+      "additionalProperties": true,
+      "required": ["decision", "rationale"],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": ["include", "review", "exclude"]
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why the human overrode the automated result. Required so the override is explainable and auditable."
+        },
+        "actor": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
