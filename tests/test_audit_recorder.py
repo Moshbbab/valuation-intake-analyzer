@@ -16,6 +16,10 @@ from engine.assumptions.registry import (  # noqa: E402
     apply_override,
     create_assumption,
 )
+from engine.adjustments.registry import (  # noqa: E402
+    apply_override as apply_adjustment_override,
+    create_adjustment,
+)
 from engine.evidence.scoring import assess_comparable  # noqa: E402
 from engine.audit.config import AuditConfig  # noqa: E402
 from engine.audit.recorder import (  # noqa: E402
@@ -25,6 +29,8 @@ from engine.audit.recorder import (  # noqa: E402
 )
 from engine.audit.storage import InMemoryAuditStore, JsonlAuditStore  # noqa: E402
 from engine.audit.adapters import (  # noqa: E402
+    record_adjustment_created,
+    record_adjustment_overridden,
     record_assumption_created,
     record_assumption_overridden,
     record_comparable_assessed,
@@ -55,6 +61,18 @@ def _comparable():
         "area": 100.0,
         "location_score": 0.9,
     }
+
+
+def _adjustment():
+    return create_adjustment({
+        "comparable_id": "C-1",
+        "factor": "location",
+        "direction": "upward",
+        "amount_or_range": "5% to 8%",
+        "rationale": "Subject occupies a superior corner position.",
+        "evidence_reference": "comparable:C-1",
+        "confidence_level": "Medium",
+    })
 
 
 # ─── the four required event types ────────────────────────────────────────────
@@ -222,3 +240,73 @@ def test_recorded_event_matches_schema_if_jsonschema_available():
     store = InMemoryAuditStore()
     event = record_assumption_created(_assumption(), store=store)
     jsonschema.validate(event, schema)
+
+
+# ─── adjustment event coverage ────────────────────────────────────────────────
+
+def test_record_adjustment_created():
+    store = InMemoryAuditStore()
+    adjustment = _adjustment()
+    event = record_adjustment_created(adjustment, store=store, actor="valuer_a")
+    assert event["entity_type"] == "adjustment"
+    assert event["action"] == "created"
+    assert event["entity_id"] == adjustment["adjustment_id"]
+    assert event["before"] is None
+    assert event["after"]["factor"] == "location"
+    assert event["rationale"] == "Subject occupies a superior corner position."
+    assert event["actor"] == "valuer_a"
+    assert len(store) == 1
+
+
+def test_record_adjustment_created_default_vocabulary_accepts_adjustment():
+    # "adjustment" must be in DEFAULT_ENTITY_TYPES, so no custom config needed.
+    store = InMemoryAuditStore()
+    event = record_adjustment_created(_adjustment(), store=store)
+    assert event["entity_type"] == "adjustment"
+
+
+def test_record_adjustment_overridden_before_after_and_metadata():
+    store = InMemoryAuditStore()
+    overridden = apply_adjustment_override(
+        _adjustment(),
+        changes={"confidence_level": "High", "amount_or_range": "10%"},
+        rationale="Two arm's-length comparables confirm the magnitude",
+        actor="lead_valuer",
+    )
+    event = record_adjustment_overridden(overridden, store=store)
+    assert event["entity_type"] == "adjustment"
+    assert event["action"] == "overridden"
+    # before/after integrity
+    assert event["before"]["confidence_level"] == "Medium"
+    assert event["after"]["confidence_level"] == "High"
+    assert event["after"]["amount_or_range"] == "10%"
+    # rationale / actor / timestamp / explanation preserved from the override
+    assert event["rationale"] == "Two arm's-length comparables confirm the magnitude"
+    assert event["actor"] == "lead_valuer"
+    assert event["timestamp"] == overridden["manual_override"]["timestamp"]
+    assert event["explanation"] == overridden["manual_override"]["explanation"]
+
+
+def test_adjustment_override_snapshot_is_immutable_to_source_mutation():
+    store = InMemoryAuditStore()
+    overridden = apply_adjustment_override(
+        _adjustment(), changes={"confidence_level": "High"},
+        rationale="see note")
+    record_adjustment_overridden(overridden, store=store)
+    # mutate the source override after recording
+    overridden["manual_override"]["previous"]["confidence_level"] = "MUTATED"
+    recorded = store.list()[0]
+    assert recorded["before"]["confidence_level"] == "Medium"
+
+
+def test_adjustment_events_use_injectable_store_not_default():
+    baseline = len(default_store)
+    store = InMemoryAuditStore()
+    record_adjustment_created(_adjustment(), store=store)
+    record_adjustment_overridden(
+        apply_adjustment_override(_adjustment(),
+                                  changes={"direction": "downward"},
+                                  rationale="revised"),
+        store=store)
+    assert len(store) == 2
+    assert len(default_store) == baseline  # default untouched
