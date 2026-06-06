@@ -11,9 +11,11 @@ from engine.valuation.config import (
     DEFAULT_CONFIG,
     DEFAULT_DIRECT_CAP_CONFIG,
     DEFAULT_NOI_CONFIG,
+    DEFAULT_RECONCILIATION_CONFIG,
     DEFAULT_SIMILARITY_CONFIG,
     DirectCapConfig,
     NOIConfig,
+    ReconciliationConfig,
     SimilarityConfig,
 )
 from engine.valuation.comparable_approach import (
@@ -43,6 +45,10 @@ from engine.valuation.direct_capitalization import (
     sensitivity_grid,
     value_from_cap_rate_range,
 )
+from engine.valuation.reconciliation import (
+    normalize_approach_weights,
+    reconcile,
+)
 
 __all__ = [
     "ComparableApproachConfig",
@@ -53,6 +59,8 @@ __all__ = [
     "DEFAULT_NOI_CONFIG",
     "DirectCapConfig",
     "DEFAULT_DIRECT_CAP_CONFIG",
+    "ReconciliationConfig",
+    "DEFAULT_RECONCILIATION_CONFIG",
     "parse_adjustment_value",
     "apply_adjustment_to_rate",
     "adjusted_unit_rate",
@@ -72,4 +80,6 @@ __all__ = [
     "value_from_cap_rate_range",
     "sensitivity_grid",
     "direct_capitalization",
+    "normalize_approach_weights",
+    "reconcile",
 ]
