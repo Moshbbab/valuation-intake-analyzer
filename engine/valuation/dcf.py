@@ -1,15 +1,26 @@
 """Discounted Cash Flow — present-value calculation support.
 
 Discounts a caller-supplied stream of period cash flows at a caller-supplied
-discount rate and adds the present value of a caller-defined reversion (either
-an explicit amount or a terminal NOI capitalized at a caller-supplied exit cap
-rate). Also supports sensitivity over caller-supplied rate sets.
+discount rate and adds the present value of a caller-defined reversion. Three
+selectable terminal-value methods are supported, chosen by which inputs the
+caller supplies: an explicit reversion amount; a terminal NOI capitalized at a
+caller-supplied exit cap rate; or a Gordon growth perpetuity
+``terminal_noi / (discount_rate - growth_rate)``. Also supports sensitivity over
+caller-supplied rate sets.
+
+Design boundary — no growth engine: this module never projects, escalates or
+grows the explicit period cash-flow stream. Those cash flows are the caller's
+responsibility and must arrive already projected (growth of the explicit stream
+is professional judgment performed upstream). The only growth input the module
+accepts is the ``growth_rate`` used in the optional Gordon-growth *terminal*
+perpetuity, which is likewise caller-supplied and applied to the terminal NOI
+only — never to the explicit periods.
 
 Calculation support only: no adopted/final value, no valuation opinion, no
-default/derived discount rate, no market default, no automatic growth, no
-default exit cap rate, no reconciliation. Every economic input — cash flows,
-discount rate, growth, exit cap rate, horizon, scenarios — is the appraiser's
-professional judgment; this module only does the arithmetic it is given.
+default/derived discount rate, no market default, no default exit cap rate, no
+reconciliation. Every economic input — cash flows, discount rate, growth, exit
+cap rate, horizon, scenarios — is the appraiser's professional judgment; this
+module only does the arithmetic it is given.
 """
 
 from typing import Any, Dict, Iterable, List, Mapping, Optional
@@ -89,14 +100,19 @@ def present_value(cash_flows: Iterable[float], discount_rate, *,
 
 
 def reversion_value(inputs: Mapping, *,
-                    config: Optional[DCFConfig] = None) -> Dict:
+                    config: Optional[DCFConfig] = None,
+                    discount_rate: Optional[float] = None) -> Dict:
     """Terminal/reversion value — caller chooses the mode (no default).
 
-    Modes:
+    Modes (selected by which keys the caller supplies):
       * explicit: ``{"amount": value}``
       * capitalized: ``{"terminal_noi": noi, "exit_cap_rate": rate}`` →
         capitalizes via the Direct Capitalization identity (exit cap rate must
         be > 0, caller-supplied).
+      * gordon growth: ``{"terminal_noi": noi, "growth_rate": g}`` →
+        ``terminal_noi / (r - g)`` where ``r`` is the discount rate. ``r`` is
+        taken from the spec's own ``discount_rate`` if present, else the
+        ``discount_rate`` passed by the caller/orchestrator. Guard: ``r > g``.
     """
     config = config or DEFAULT_DCF_CONFIG
     if "amount" in inputs and inputs.get("amount") is not None:
@@ -110,7 +126,25 @@ def reversion_value(inputs: Mapping, *,
         return {"reversion": _round(reversion, config),
                 "method": "capitalized",
                 "exit_cap_rate": inputs["exit_cap_rate"]}
-    raise DCFError("reversion needs 'amount' or 'terminal_noi'+'exit_cap_rate'")
+    if inputs.get("terminal_noi") is not None \
+            and inputs.get("growth_rate") is not None:
+        terminal_noi = inputs["terminal_noi"]
+        growth = inputs["growth_rate"]
+        rate = inputs.get("discount_rate", discount_rate)
+        if not _is_number(terminal_noi):
+            raise DCFError("terminal_noi must be a number")
+        if not _is_number(growth):
+            raise DCFError("growth_rate must be a number")
+        if not _is_number(rate):
+            raise DCFError("gordon growth needs a discount_rate")
+        if not rate > growth:
+            raise DCFError("discount_rate must be greater than growth_rate")
+        reversion = terminal_noi / (rate - growth)
+        return {"reversion": _round(reversion, config),
+                "method": "gordon_growth",
+                "growth_rate": growth, "discount_rate": rate}
+    raise DCFError("reversion needs 'amount', 'terminal_noi'+'exit_cap_rate', "
+                   "or 'terminal_noi'+'growth_rate'")
 
 
 def discounted_cash_flow(inputs: Mapping, *,
@@ -150,8 +184,16 @@ def discounted_cash_flow(inputs: Mapping, *,
     pv_reversion = 0.0
     reversion = None
     if inputs.get("reversion") is not None:
-        reversion = reversion_value(inputs["reversion"], config=config)
         period = inputs.get("reversion_period", len(flows))
+        # Scalar discount rate to use for a Gordon-growth terminal perpetuity:
+        # the reversion period's rate when per-period, else the scalar rate.
+        if isinstance(discount_rate, (list, tuple)):
+            index = period - 1 if 1 <= period <= len(discount_rate) else -1
+            reversion_rate = discount_rate[index] if discount_rate else None
+        else:
+            reversion_rate = discount_rate
+        reversion = reversion_value(inputs["reversion"], config=config,
+                                    discount_rate=reversion_rate)
         rev_factor = (_period_factors(discount_rate, period, config)[period - 1]
                       if period >= 1 else 1.0)
         pv_reversion = reversion["reversion"] * rev_factor
@@ -172,7 +214,10 @@ def discounted_cash_flow(inputs: Mapping, *,
         "breakdown": breakdown,
         "explanation": explanation,
         "basis": ("calculation support — discounted cash flow value "
-                  "indication; not an adopted value or valuation opinion"),
+                  "indication; period cash flows are caller-supplied and the "
+                  "engine applies no growth/escalation to them (any growth_rate "
+                  "affects only a Gordon-growth terminal perpetuity); not an "
+                  "adopted value or valuation opinion"),
     }
 
     if audit_store is not None:

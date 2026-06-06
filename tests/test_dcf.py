@@ -72,6 +72,61 @@ def test_reversion_requires_a_mode():
         reversion_value({})
 
 
+# ─── Gordon growth terminal value ─────────────────────────────────────────────
+
+def test_reversion_gordon_growth():
+    rev = reversion_value({"terminal_noi": 100000, "growth_rate": 0.02},
+                          discount_rate=0.10)
+    assert rev["method"] == "gordon_growth"
+    assert rev["reversion"] == pytest.approx(100000 / (0.10 - 0.02))  # 1,250,000
+    assert rev["growth_rate"] == 0.02
+
+
+def test_gordon_growth_selected_by_growth_rate_key():
+    rev = reversion_value({"terminal_noi": 90000, "growth_rate": 0.03,
+                           "discount_rate": 0.09})
+    assert rev["method"] == "gordon_growth"
+    assert rev["reversion"] == pytest.approx(90000 / (0.09 - 0.03))
+
+
+def test_gordon_growth_guard_discount_must_exceed_growth():
+    with pytest.raises(DCFError):
+        reversion_value({"terminal_noi": 100000, "growth_rate": 0.10},
+                        discount_rate=0.10)  # r == g
+    with pytest.raises(DCFError):
+        reversion_value({"terminal_noi": 100000, "growth_rate": 0.12},
+                        discount_rate=0.10)  # r < g
+
+
+def test_gordon_growth_requires_a_discount_rate():
+    with pytest.raises(DCFError):
+        reversion_value({"terminal_noi": 100000, "growth_rate": 0.02})  # no r
+
+
+def test_capitalized_takes_precedence_when_both_exit_and_growth_given():
+    # exit_cap_rate present -> capitalized mode (selection is key-driven)
+    rev = reversion_value({"terminal_noi": 100000, "exit_cap_rate": 0.08,
+                           "growth_rate": 0.02}, discount_rate=0.10)
+    assert rev["method"] == "capitalized"
+
+
+def test_dcf_with_gordon_growth_reversion():
+    result = discounted_cash_flow({
+        "cash_flows": [80000, 82000],
+        "discount_rate": 0.10,
+        "reversion": {"terminal_noi": 90000, "growth_rate": 0.02},
+    })
+    assert result["reversion"]["method"] == "gordon_growth"
+    # reversion = 90000/(0.10-0.02) = 1,125,000 received at period 2
+    expected_rev_pv = (90000 / (0.10 - 0.02)) / (1.10 ** 2)
+    assert result["present_value_reversion"] == pytest.approx(expected_rev_pv)
+
+
+def test_basis_documents_no_growth_on_explicit_flows():
+    result = discounted_cash_flow({"cash_flows": [100000], "discount_rate": 0.1})
+    assert "applies no growth" in result["basis"]
+
+
 # ─── discounted_cash_flow ─────────────────────────────────────────────────────
 
 def test_dcf_value_is_pv_flows_plus_pv_reversion():
