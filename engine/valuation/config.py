@@ -137,3 +137,21 @@ class ReconciliationConfig:
 
 # Convenience default instance.
 DEFAULT_RECONCILIATION_CONFIG = ReconciliationConfig()
+
+
+@dataclass(frozen=True)
+class AgreementConfig:
+    """Configuration injected into cross-approach agreement/dispersion metrics.
+
+    ``normalize_against`` selects the central figure that percentage dispersion
+    is expressed relative to — the built-in ``"weighted_mean"`` or ``"mean"``, or
+    a callable ``(centrals, weights) -> base``. No confidence band, label or
+    threshold is encoded: the module reports raw dispersion, not a verdict on it.
+    """
+
+    normalize_against: Union[str, Callable] = "weighted_mean"
+    rounding: Optional[int] = None
+
+
+# Convenience default instance.
+DEFAULT_AGREEMENT_CONFIG = AgreementConfig()
