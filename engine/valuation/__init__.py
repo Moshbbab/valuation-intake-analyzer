@@ -7,8 +7,10 @@ a final valuation opinion.
 """
 
 from engine.valuation.config import (
+    AgreementConfig,
     ComparableApproachConfig,
     DCFConfig,
+    DEFAULT_AGREEMENT_CONFIG,
     DEFAULT_CONFIG,
     DEFAULT_DCF_CONFIG,
     DEFAULT_DIRECT_CAP_CONFIG,
@@ -58,6 +60,9 @@ from engine.valuation.reconciliation import (
     normalize_approach_weights,
     reconcile,
 )
+from engine.valuation.agreement import (
+    approach_dispersion,
+)
 
 __all__ = [
     "ComparableApproachConfig",
@@ -72,6 +77,8 @@ __all__ = [
     "DEFAULT_DCF_CONFIG",
     "ReconciliationConfig",
     "DEFAULT_RECONCILIATION_CONFIG",
+    "AgreementConfig",
+    "DEFAULT_AGREEMENT_CONFIG",
     "parse_adjustment_value",
     "apply_adjustment_to_rate",
     "adjusted_unit_rate",
@@ -98,4 +105,5 @@ __all__ = [
     "dcf_sensitivity",
     "normalize_approach_weights",
     "reconcile",
+    "approach_dispersion",
 ]
