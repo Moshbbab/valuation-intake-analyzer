@@ -98,3 +98,24 @@ class DirectCapConfig:
 
 # Convenience default instance.
 DEFAULT_DIRECT_CAP_CONFIG = DirectCapConfig()
+
+
+@dataclass(frozen=True)
+class ReconciliationConfig:
+    """Configuration injected into cross-approach reconciliation.
+
+    ``weights`` optionally maps approach name -> weight; per-indication weights
+    override it. When no weights are supplied anywhere, reconciliation falls back
+    to equal weights (a mixed/partial weight set is rejected, not guessed).
+    ``aggregation`` is the built-in ``"weighted_mean"`` or a callable
+    ``(approach_centrals, weights) -> central``. No default approach hierarchy
+    and no adopted value are encoded.
+    """
+
+    weights: Optional[Mapping] = None
+    aggregation: Union[str, Callable] = "weighted_mean"
+    rounding: Optional[int] = None
+
+
+# Convenience default instance.
+DEFAULT_RECONCILIATION_CONFIG = ReconciliationConfig()
