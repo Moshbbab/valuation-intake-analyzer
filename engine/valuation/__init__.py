@@ -13,9 +13,11 @@ from engine.valuation.config import (
     DEFAULT_DCF_CONFIG,
     DEFAULT_DIRECT_CAP_CONFIG,
     DEFAULT_NOI_CONFIG,
+    DEFAULT_RECONCILIATION_CONFIG,
     DEFAULT_SIMILARITY_CONFIG,
     DirectCapConfig,
     NOIConfig,
+    ReconciliationConfig,
     SimilarityConfig,
 )
 from engine.valuation.comparable_approach import (
@@ -52,6 +54,10 @@ from engine.valuation.dcf import (
     present_value,
     reversion_value,
 )
+from engine.valuation.reconciliation import (
+    normalize_approach_weights,
+    reconcile,
+)
 
 __all__ = [
     "ComparableApproachConfig",
@@ -64,6 +70,8 @@ __all__ = [
     "DEFAULT_DIRECT_CAP_CONFIG",
     "DCFConfig",
     "DEFAULT_DCF_CONFIG",
+    "ReconciliationConfig",
+    "DEFAULT_RECONCILIATION_CONFIG",
     "parse_adjustment_value",
     "apply_adjustment_to_rate",
     "adjusted_unit_rate",
@@ -88,4 +96,6 @@ __all__ = [
     "reversion_value",
     "discounted_cash_flow",
     "dcf_sensitivity",
+    "normalize_approach_weights",
+    "reconcile",
 ]
