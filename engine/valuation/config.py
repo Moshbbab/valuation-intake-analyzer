@@ -155,3 +155,70 @@ class AgreementConfig:
 
 # Convenience default instance.
 DEFAULT_AGREEMENT_CONFIG = AgreementConfig()
+
+
+# ─── Valuation production engines (market rate, land value, cap rate) ──────────
+
+@dataclass(frozen=True)
+class MarketRateConfig:
+    """Configuration injected into the Comparable Market Engine.
+
+    Produces an adopted land rate range from comparable transactions. Every knob
+    is configurable: ``outlier_method`` ("iqr"/"none"/callable) with ``iqr_k``
+    fence; ``central`` chooses the recommended base rate ("weighted_mean"/
+    "median"/"mean"/callable); ``range_basis`` chooses the low/high bounds
+    ("percentile"/"min_max") with ``low_pct``/``high_pct``. No fixed market rate
+    is encoded — the rate is computed from the supplied evidence only.
+    """
+
+    outlier_method: Union[str, Callable] = "iqr"
+    iqr_k: float = 1.5
+    central: Union[str, Callable] = "weighted_mean"
+    range_basis: str = "percentile"
+    low_pct: float = 25.0
+    high_pct: float = 75.0
+    weight_field: str = "weight"
+    rounding: Optional[int] = None
+
+
+DEFAULT_MARKET_RATE_CONFIG = MarketRateConfig()
+
+
+@dataclass(frozen=True)
+class LandValueConfig:
+    """Configuration injected into the Land Value Engine.
+
+    Land value = area x rate, evaluated at the low/base/high points of an
+    adopted rate range. ``rounding`` only affects presentation. No rate is
+    assumed here — the rate range is always caller-supplied (typically from the
+    Comparable Market Engine).
+    """
+
+    rounding: Optional[int] = None
+
+
+DEFAULT_LAND_VALUE_CONFIG = LandValueConfig()
+
+
+@dataclass(frozen=True)
+class CapRateConfig:
+    """Configuration injected into the Cap Rate Engine.
+
+    Derives implied capitalisation rates (NOI / price) from market transactions
+    and recommends an adopted cap-rate range. Mirrors the market-rate knobs:
+    ``outlier_method``/``iqr_k``, ``central`` recommendation strategy,
+    ``range_basis`` with percentiles. No market cap rate is encoded — rates are
+    implied from the supplied evidence only.
+    """
+
+    outlier_method: Union[str, Callable] = "iqr"
+    iqr_k: float = 1.5
+    central: Union[str, Callable] = "weighted_mean"
+    range_basis: str = "percentile"
+    low_pct: float = 25.0
+    high_pct: float = 75.0
+    weight_field: str = "weight"
+    rounding: Optional[int] = None
+
+
+DEFAULT_CAP_RATE_CONFIG = CapRateConfig()
