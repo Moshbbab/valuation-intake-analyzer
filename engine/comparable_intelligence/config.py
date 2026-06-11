@@ -71,3 +71,116 @@ class QualityConfig:
 
 # Convenience default instance.
 DEFAULT_QUALITY_CONFIG = QualityConfig()
+
+
+# ─── CIL-2: Evidence Quality Governance defaults ──────────────────────────────
+# Governance establishes *appropriateness/eligibility* of evidence — distinct
+# from numeric quality scoring (CIL-1) and from admission (later). Every mapping
+# below is a DEFAULT policy expressed as data: fully replaceable, never a
+# hard-coded rule in logic, and never a numeric sufficiency/count threshold.
+
+# Raw source label (case-insensitive) -> source class. Unknown labels map to
+# ``DEFAULT_UNKNOWN_SOURCE_CLASS``.
+DEFAULT_SOURCE_TAXONOMY: Dict[str, str] = {
+    "registry": "registry",
+    "land_registry": "registry",
+    "official": "official_record",
+    "official_record": "official_record",
+    "valuer": "valuer_confirmed",
+    "valuer_confirmed": "valuer_confirmed",
+    "broker": "broker_supplied",
+    "broker_supplied": "broker_supplied",
+    "agent": "broker_supplied",
+    "listing": "advertised",
+    "asking": "advertised",
+    "advertised": "advertised",
+    "inferred": "inferred",
+    "anecdotal": "anecdotal",
+}
+DEFAULT_UNKNOWN_SOURCE_CLASS: str = "unknown"
+
+# Source class -> evidence directness.
+DEFAULT_EVIDENCE_TYPE_MAP: Dict[str, str] = {
+    "registry": "direct",
+    "official_record": "direct",
+    "valuer_confirmed": "direct",
+    "broker_supplied": "indirect",
+    "advertised": "indirect",
+    "unknown": "indirect",
+    "inferred": "inferred",
+    "anecdotal": "inferred",
+}
+
+# Default reliability hierarchy (most appropriate first). This is governance
+# POLICY expressed as ordered data — callers may replace it completely; nothing
+# in the logic depends on this particular order.
+DEFAULT_RELIABILITY_HIERARCHY: Tuple[str, ...] = (
+    "registry",
+    "official_record",
+    "valuer_confirmed",
+    "broker_supplied",
+    "advertised",
+    "inferred",
+    "anecdotal",
+)
+
+# Source class -> default admissibility role (before weak-evidence handling).
+# Per approved decision: advertised/asking and inferred/anecdotal evidence is
+# corroborating-only by default — never "supporting".
+DEFAULT_ADMISSIBILITY_BY_CLASS: Dict[str, str] = {
+    "registry": "primary",
+    "official_record": "primary",
+    "valuer_confirmed": "supporting",
+    "broker_supplied": "supporting",
+    "advertised": "corroborating_only",
+    "inferred": "corroborating_only",
+    "anecdotal": "corroborating_only",
+    "unknown": "corroborating_only",
+}
+
+# Ordering of admissibility roles from strongest to weakest; downgrades move
+# rightward only. Extensible — supply your own order with custom roles.
+DEFAULT_ADMISSIBILITY_ORDER: Tuple[str, ...] = (
+    "primary", "supporting", "corroborating_only", "inadmissible",
+)
+
+# Source classes that always require verification by default (decision: the
+# advertised/asking family), in addition to any unverified/unverifiable status.
+DEFAULT_VERIFICATION_REQUIRED_CLASSES: Tuple[str, ...] = (
+    "advertised", "inferred", "anecdotal", "unknown",
+)
+
+# Role a weak-evidence downgrade falls to (at most) by default.
+DEFAULT_WEAK_EVIDENCE_MAX_ROLE: str = "corroborating_only"
+
+
+@dataclass(frozen=True)
+class GovernanceConfig:
+    """Configuration injected into ``governance`` functions.
+
+    Every field is optional and falls back to the module defaults above.
+    ``admissibility_policy`` may be a callable ``(classification, verification,
+    config) -> {admissibility, requires_verification, caveats}`` replacing the
+    default policy entirely; ``verification_resolver`` may be a callable
+    ``(comparable) -> {status, method, by, on}``. ``weak_evidence_rules`` maps
+    rule name -> callable ``(comparable, classification, verification) ->
+    Optional[{caveats, requires_verification, max_role}]``. No numeric
+    sufficiency threshold and no admission state exists here.
+    """
+
+    source_taxonomy: Optional[Mapping] = None
+    unknown_source_class: str = DEFAULT_UNKNOWN_SOURCE_CLASS
+    evidence_type_map: Optional[Mapping] = None
+    reliability_hierarchy: Optional[Tuple[str, ...]] = None
+    admissibility_by_class: Optional[Mapping] = None
+    admissibility_order: Optional[Tuple[str, ...]] = None
+    admissibility_policy: Optional[Callable] = None
+    verification_required_classes: Optional[Tuple[str, ...]] = None
+    verification_resolver: Optional[Callable] = None
+    weak_evidence_rules: Optional[Mapping] = None
+    weak_evidence_max_role: str = DEFAULT_WEAK_EVIDENCE_MAX_ROLE
+    required_fields: Tuple[str, ...] = DEFAULT_REQUIRED_FIELDS
+
+
+# Convenience default instance.
+DEFAULT_GOVERNANCE_CONFIG = GovernanceConfig()
