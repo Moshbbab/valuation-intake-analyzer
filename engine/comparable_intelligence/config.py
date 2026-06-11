@@ -239,3 +239,49 @@ class OutlierConfig:
 
 # Convenience default instance.
 DEFAULT_OUTLIER_CONFIG = OutlierConfig()
+
+
+# ─── CIL-4: Admission Framework defaults ──────────────────────────────────────
+# NOT a fixed state machine: states are data, rules are data/callables, conflict
+# resolution is a named strategy or callable, and the no-match default state is
+# configurable. The framework recommends — it never admits or rejects by itself.
+
+# Suggested state set. Callers may add or remove states freely; no state is
+# privileged in logic.
+DEFAULT_ADMISSION_STATES: Tuple[str, ...] = (
+    "admit", "admit_conditional", "flag", "review", "reject",
+)
+
+# State recommended when no rule matches.
+DEFAULT_ADMISSION_DEFAULT_STATE: str = "review"
+
+# Reliability thresholds referenced by the suggested default rules; both are
+# engagement policy and fully overridable (they mirror evidence defaults).
+DEFAULT_ADMISSION_STRONG_RELIABILITY: float = 0.70
+DEFAULT_ADMISSION_WEAK_RELIABILITY: float = 0.45
+
+
+@dataclass(frozen=True)
+class AdmissionConfig:
+    """Configuration injected into the Admission Framework.
+
+    ``states`` is the extensible state vocabulary. ``rules`` is an ordered
+    tuple of rule mappings ``{name, predicate(context)->bool, state,
+    conditions, rationale, priority}`` — None selects the suggested default
+    set. ``conflict_resolution`` is ``"first_match"`` (configured order),
+    ``"highest_priority"`` or a callable receiving the matched rules and
+    returning the governing one. ``allowed_transitions`` (state -> tuple of
+    states) is open when None. No mandatory path is encoded anywhere.
+    """
+
+    states: Tuple[str, ...] = DEFAULT_ADMISSION_STATES
+    rules: Optional[Tuple] = None
+    conflict_resolution: Union[str, Callable] = "first_match"
+    default_state: str = DEFAULT_ADMISSION_DEFAULT_STATE
+    allowed_transitions: Optional[Mapping] = None
+    strong_reliability: float = DEFAULT_ADMISSION_STRONG_RELIABILITY
+    weak_reliability: float = DEFAULT_ADMISSION_WEAK_RELIABILITY
+
+
+# Convenience default instance.
+DEFAULT_ADMISSION_CONFIG = AdmissionConfig()

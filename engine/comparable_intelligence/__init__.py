@@ -22,6 +22,8 @@ from engine.comparable_intelligence.config import (
     DEFAULT_ADMISSIBILITY_ORDER,
     DEFAULT_EVIDENCE_TYPE_MAP,
     DEFAULT_GOVERNANCE_CONFIG,
+    DEFAULT_ADMISSION_CONFIG,
+    DEFAULT_ADMISSION_STATES,
     DEFAULT_MARKET_RELEVANCE_ATTRS,
     DEFAULT_OUTLIER_CONFIG,
     DEFAULT_QUALITY_CONFIG,
@@ -32,6 +34,7 @@ from engine.comparable_intelligence.config import (
     DEFAULT_UNVERIFIED_SCORE,
     DEFAULT_VERIFICATION_REQUIRED_CLASSES,
     EXTENDED_DEFAULT_WEIGHTS,
+    AdmissionConfig,
     GovernanceConfig,
     OutlierConfig,
     QualityConfig,
@@ -46,6 +49,11 @@ from engine.comparable_intelligence.governance import (
 from engine.comparable_intelligence.outliers import (
     classify_outliers,
     gross_adjustment_burden,
+)
+from engine.comparable_intelligence.admission import (
+    check_transition,
+    default_admission_rules,
+    recommend_admission,
 )
 from engine.comparable_intelligence.quality import (
     ALL_FACTOR_SCORERS,
@@ -93,4 +101,10 @@ __all__ = [
     "DEFAULT_OUTLIER_CONFIG",
     "classify_outliers",
     "gross_adjustment_burden",
+    "AdmissionConfig",
+    "DEFAULT_ADMISSION_CONFIG",
+    "DEFAULT_ADMISSION_STATES",
+    "recommend_admission",
+    "default_admission_rules",
+    "check_transition",
 ]
