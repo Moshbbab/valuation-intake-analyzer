@@ -222,3 +222,48 @@ class CapRateConfig:
 
 
 DEFAULT_CAP_RATE_CONFIG = CapRateConfig()
+
+
+@dataclass(frozen=True)
+class AdjustmentEngineConfig:
+    """Configuration injected into the Comparable Adjustment Engine.
+
+    Each adjustment dimension is driven by a caller-supplied sensitivity — the
+    engine performs the mechanics; it assumes no market movement or coefficient.
+    All sensitivities default to 0 (no adjustment) and the use map defaults to
+    empty, so nothing is adjusted unless the caller supplies a coefficient.
+    ``annual_market_trend`` is the market movement per year used for the time
+    adjustment; ``combination`` is "multiplicative"/"additive" or a callable
+    ``(base, pct_by_dim) -> adjusted``. No professional judgment is encoded.
+    """
+
+    annual_market_trend: float = 0.0
+    valuation_date: Optional[str] = None
+    date_field: str = "date"
+    location_sensitivity: float = 0.0
+    location_scale: float = 1.0
+    size_sensitivity: float = 0.0
+    frontage_sensitivity: float = 0.0
+    use_adjustment_map: Optional[Mapping] = None
+    combination: Union[str, Callable] = "multiplicative"
+    rounding: Optional[int] = None
+
+
+DEFAULT_ADJUSTMENT_ENGINE_CONFIG = AdjustmentEngineConfig()
+
+
+@dataclass(frozen=True)
+class ReconciliationEngineConfig:
+    """Configuration injected into the Reconciliation Engine.
+
+    ``agreement_basis`` selects the dispersion measure inverted into the 0..1
+    agreement score — "coefficient_of_variation" (default) or "spread_pct".
+    The engine compares approaches and suggests a range; it never adopts a
+    final value.
+    """
+
+    agreement_basis: str = "coefficient_of_variation"
+    rounding: Optional[int] = None
+
+
+DEFAULT_RECONCILIATION_ENGINE_CONFIG = ReconciliationEngineConfig()

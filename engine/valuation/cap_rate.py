@@ -25,14 +25,34 @@ def _is_number(value) -> bool:
 
 def _implied_cap(transaction: Mapping) -> Optional[float]:
     """Implied cap rate for one transaction (explicit yield, or NOI/price)."""
-    explicit = transaction.get("cap_rate")
-    if _is_number(explicit):
-        return float(explicit)
+    return _derive(transaction)["implied_cap_rate"]
+
+
+def _derive(transaction: Mapping) -> Dict:
+    """Derive implied cap rate, implied NOI and price for one transaction.
+
+    Handles three evidence shapes: NOI + price -> implied yield; explicit
+    cap_rate + price -> implied NOI; explicit cap_rate + NOI -> implied price.
+    Returns Nones for whatever cannot be derived from the supplied evidence.
+    """
     noi = transaction.get("noi")
     price = transaction.get("price", transaction.get("sale_price"))
+    explicit = transaction.get("cap_rate")
+
     if _is_number(noi) and _is_number(price) and price > 0:
-        return noi / price
-    return None
+        return {"implied_cap_rate": noi / price, "implied_noi": float(noi),
+                "price": float(price)}
+    if _is_number(explicit) and _is_number(price) and price > 0:
+        return {"implied_cap_rate": float(explicit),
+                "implied_noi": float(explicit) * float(price),
+                "price": float(price)}
+    if _is_number(explicit) and _is_number(noi) and explicit > 0:
+        return {"implied_cap_rate": float(explicit), "implied_noi": float(noi),
+                "price": float(noi) / float(explicit)}
+    if _is_number(explicit):
+        return {"implied_cap_rate": float(explicit), "implied_noi": None,
+                "price": None}
+    return {"implied_cap_rate": None, "implied_noi": None, "price": None}
 
 
 def adopted_cap_rate(transactions: Iterable[Mapping], *,
@@ -52,7 +72,8 @@ def adopted_cap_rate(transactions: Iterable[Mapping], *,
     skipped: List = []
     for transaction in transactions:
         tid = transaction.get("transaction_id", transaction.get("comparable_id"))
-        cap = _implied_cap(transaction)
+        derived = _derive(transaction)
+        cap = derived["implied_cap_rate"]
         if cap is None or cap <= 0:
             skipped.append(tid)
             continue
@@ -60,7 +81,8 @@ def adopted_cap_rate(transactions: Iterable[Mapping], *,
         weight = float(weight) if _is_number(weight) else 1.0
         items.append({"id": tid, "value": cap, "weight": weight})
         implied.append({"transaction_id": tid, "implied_cap_rate": cap,
-                        "weight": weight})
+                        "implied_yield": cap, "implied_noi": derived["implied_noi"],
+                        "price": derived["price"], "weight": weight})
 
     if not items:
         return {"adopted_cap_rate": {"low": None, "base": None, "high": None},
@@ -87,6 +109,13 @@ def adopted_cap_rate(transactions: Iterable[Mapping], *,
                   "implied market yields; supports direct capitalization"),
     }
 
+    # Market-derived view: surface the implied NOI/yield evidence explicitly.
+    result["implied_noi"] = [{"transaction_id": row["transaction_id"],
+                              "implied_noi": row["implied_noi"],
+                              "implied_yield": row["implied_yield"],
+                              "price": row["price"]}
+                             for row in implied]
+
     if audit_store is not None:
         record_event(
             "valuation", None, "cap_rate_adopted",
@@ -97,3 +126,15 @@ def adopted_cap_rate(transactions: Iterable[Mapping], *,
             store=audit_store, config=audit_config or UNRESTRICTED_CONFIG)
 
     return result
+
+
+def market_derived_cap_rate(transactions, *, config=None,
+                            audit_store=None, audit_config=None):
+    """Market Derived Cap Rate Engine entry point.
+
+    Alias for :func:`adopted_cap_rate` under the engine's deliverable name —
+    derives implied cap rates, implied NOI and implied yields from actual
+    transactions and recommends an adopted cap-rate range.
+    """
+    return adopted_cap_rate(transactions, config=config,
+                            audit_store=audit_store, audit_config=audit_config)
