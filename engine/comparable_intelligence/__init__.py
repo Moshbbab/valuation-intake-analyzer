@@ -23,6 +23,7 @@ from engine.comparable_intelligence.config import (
     DEFAULT_EVIDENCE_TYPE_MAP,
     DEFAULT_GOVERNANCE_CONFIG,
     DEFAULT_MARKET_RELEVANCE_ATTRS,
+    DEFAULT_OUTLIER_CONFIG,
     DEFAULT_QUALITY_CONFIG,
     DEFAULT_RELIABILITY_HIERARCHY,
     DEFAULT_REQUIRED_FIELDS,
@@ -32,6 +33,7 @@ from engine.comparable_intelligence.config import (
     DEFAULT_VERIFICATION_REQUIRED_CLASSES,
     EXTENDED_DEFAULT_WEIGHTS,
     GovernanceConfig,
+    OutlierConfig,
     QualityConfig,
 )
 from engine.comparable_intelligence.governance import (
@@ -40,6 +42,10 @@ from engine.comparable_intelligence.governance import (
     govern_evidence,
     hierarchy_rank,
     resolve_verification,
+)
+from engine.comparable_intelligence.outliers import (
+    classify_outliers,
+    gross_adjustment_burden,
 )
 from engine.comparable_intelligence.quality import (
     ALL_FACTOR_SCORERS,
@@ -83,4 +89,8 @@ __all__ = [
     "hierarchy_rank",
     "assess_admissibility",
     "govern_evidence",
+    "OutlierConfig",
+    "DEFAULT_OUTLIER_CONFIG",
+    "classify_outliers",
+    "gross_adjustment_burden",
 ]

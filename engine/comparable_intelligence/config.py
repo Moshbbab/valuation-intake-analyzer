@@ -184,3 +184,58 @@ class GovernanceConfig:
 
 # Convenience default instance.
 DEFAULT_GOVERNANCE_CONFIG = GovernanceConfig()
+
+
+# ─── CIL-3: Outlier detection defaults ────────────────────────────────────────
+# Outlier detection CLASSIFIES only — it never removes a comparable. Severity
+# tiers map to advisory classes via ``DEFAULT_OUTLIER_CLASS_BY_SEVERITY`` and
+# ``auto_exclude`` is False by default (and even when enabled it only flags ids
+# for human confirmation).
+
+# Statistical methods applied by default; "zscore" and "mad" are also built in,
+# and any entry may be a callable (values_by_id, config) -> {id: severity 0..3}.
+DEFAULT_OUTLIER_METHODS: Tuple[str, ...] = ("iqr",)
+
+# Tiered fences per built-in method: (mild, severe, extreme) -> severity 1/2/3.
+DEFAULT_IQR_FENCES: Tuple[float, float, float] = (1.5, 3.0, 4.5)
+DEFAULT_ZSCORE_FENCES: Tuple[float, float, float] = (2.5, 3.5, 4.5)
+DEFAULT_MAD_FENCES: Tuple[float, float, float] = (3.0, 4.5, 6.0)
+
+# Severity (max across methods) -> advisory outlier class. 0 -> "none".
+DEFAULT_OUTLIER_CLASS_BY_SEVERITY: Dict[int, str] = {
+    1: "warning",
+    2: "review_required",
+    3: "exclude_candidate",
+}
+
+# Professional outlier rule: gross relative adjustment above this cap marks the
+# comparable severity-2 (review_required) by default. None disables the rule.
+DEFAULT_PROFESSIONAL_BURDEN_CAP: float = 1.0
+DEFAULT_PROFESSIONAL_SEVERITY: int = 2
+
+
+@dataclass(frozen=True)
+class OutlierConfig:
+    """Configuration injected into ``outliers.classify_outliers``.
+
+    ``methods`` lists built-in names ("iqr", "zscore", "mad") and/or callables
+    ``(values_by_id, config) -> {id: severity}``. Fences are tiered (mild,
+    severe, extreme). ``class_by_severity`` maps severity to advisory class.
+    ``professional_burden_cap`` None disables the professional rule.
+    ``auto_exclude`` defaults to False — classification is advisory and nothing
+    is ever removed.
+    """
+
+    methods: Optional[Tuple] = None
+    iqr_fences: Tuple[float, float, float] = DEFAULT_IQR_FENCES
+    zscore_fences: Tuple[float, float, float] = DEFAULT_ZSCORE_FENCES
+    mad_fences: Tuple[float, float, float] = DEFAULT_MAD_FENCES
+    class_by_severity: Optional[Mapping] = None
+    professional_burden_cap: Optional[float] = DEFAULT_PROFESSIONAL_BURDEN_CAP
+    professional_severity: int = DEFAULT_PROFESSIONAL_SEVERITY
+    auto_exclude: bool = False
+    rounding: Optional[int] = None
+
+
+# Convenience default instance.
+DEFAULT_OUTLIER_CONFIG = OutlierConfig()
