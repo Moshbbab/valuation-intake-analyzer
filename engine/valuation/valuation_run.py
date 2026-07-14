@@ -26,6 +26,7 @@ from engine.audit.config import UNRESTRICTED_CONFIG
 from engine.audit.recorder import record_event
 from engine.valuation.cap_rate import market_derived_cap_rate
 from engine.valuation.comparable_adjustment import adjustment_grid
+from engine.valuation.decision_ledger import build_decision_record
 from engine.valuation.dcf import discounted_cash_flow
 from engine.valuation.direct_capitalization import (
     capitalize,
@@ -53,9 +54,24 @@ def _land_approach(subject, evidence, configs, ctx) -> None:
     stages["adjustment"] = grid
     completed.append("adjustment")
 
+    ledger_entries = [{"id": r["comparable_id"], "value": r["adjusted_rate"]}
+                      for r in grid["adjusted_rates"]]
+    market_config = configs.get("market_rate")
+    decision = build_decision_record(
+        ledger_entries,
+        outlier_method=getattr(market_config, "outlier_method", "iqr"),
+        iqr_k=getattr(market_config, "iqr_k", 1.5),
+        outlier_action=getattr(market_config, "outlier_action", "flag"),
+        overrides=configs.get("market_overrides"),
+        weights=configs.get("comparable_weights"),
+        audit_store=configs.get("_audit_store"),
+        audit_config=configs.get("_audit_config"))
+    stages["decision_record"] = decision
+    completed.append("decision_record")
+
     market = adopted_market_rate(grid["adjusted_rates"],
-                                 config=configs.get("market_rate"),
-                                 overrides=(configs.get("market_overrides")),
+                                 config=market_config,
+                                 decision=decision,
                                  audit_store=configs.get("_audit_store"),
                                  audit_config=configs.get("_audit_config"))
     stages["market_rate"] = market

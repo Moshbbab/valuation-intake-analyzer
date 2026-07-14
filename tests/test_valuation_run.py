@@ -56,10 +56,11 @@ def test_full_run_produces_a_number_at_every_stage():
     out = run_valuation(_subject(), _evidence(), configs=_configs())
     summary = out["value_summary"]
 
-    # every workflow stage ran
+    # every workflow stage ran (incl. the evidence decision record seam)
     assert out["stages_completed"] == [
-        "adjustment", "market_rate", "land_value", "noi", "cap_rate",
-        "direct_capitalization", "dcf", "sensitivity", "reconciliation"]
+        "adjustment", "decision_record", "market_rate", "land_value", "noi",
+        "cap_rate", "direct_capitalization", "dcf", "sensitivity",
+        "reconciliation"]
 
     # each output is numeric
     assert summary["adopted_land_rate"]["base"] > 0
