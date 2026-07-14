@@ -81,6 +81,10 @@ from engine.valuation.comparable_adjustment import (
     adjustment_grid,
 )
 from engine.valuation.reconciliation_engine import reconcile_approaches
+from engine.valuation.decision_ledger import (
+    apply_decision,
+    build_decision_record,
+)
 from engine.valuation.valuation_run import run_valuation
 
 __all__ = [
@@ -144,4 +148,6 @@ __all__ = [
     "adjustment_grid",
     "reconcile_approaches",
     "run_valuation",
+    "build_decision_record",
+    "apply_decision",
 ]

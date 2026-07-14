@@ -17,6 +17,7 @@ from typing import Dict, Iterable, List, Mapping, Optional
 from engine.audit.config import UNRESTRICTED_CONFIG
 from engine.audit.recorder import record_event
 from engine.valuation._rate_support import aggregate_rates
+from engine.valuation.decision_ledger import apply_decision
 from engine.valuation.comparable_approach import adjusted_unit_rate
 from engine.valuation.config import DEFAULT_MARKET_RATE_CONFIG, MarketRateConfig
 
@@ -40,6 +41,7 @@ def _adjusted_central(comparable: Mapping) -> Optional[float]:
 def adopted_market_rate(comparables: Iterable[Mapping], *,
                         config: Optional[MarketRateConfig] = None,
                         overrides: Optional[Mapping] = None,
+                        decision: Optional[Mapping] = None,
                         audit_store=None, audit_config=None) -> Dict:
     """Compute an adopted land rate range from comparable transactions.
 
@@ -73,12 +75,27 @@ def adopted_market_rate(comparables: Iterable[Mapping], *,
                 "basis": "comparable market engine — no computable rates",
                 "deliverable": "adopted land rate range"}
 
-    reduced = aggregate_rates(
-        items, outlier_method=config.outlier_method, iqr_k=config.iqr_k,
-        central=config.central, range_basis=config.range_basis,
-        low_pct=config.low_pct, high_pct=config.high_pct,
-        rounding=config.rounding, outlier_action=config.outlier_action,
-        overrides=overrides)
+    if decision is not None:
+        decided = apply_decision(items, decision)
+        reduced = aggregate_rates(
+            decided, outlier_method="none", iqr_k=config.iqr_k,
+            central=config.central, range_basis=config.range_basis,
+            low_pct=config.low_pct, high_pct=config.high_pct,
+            rounding=config.rounding, outlier_action="flag")
+        reduced["outlier_flags"] = list(decision.get("outlier_flags", []))
+        reduced["excluded"] = list(decision.get("excluded_ids", []))
+        reduced["warnings"] = list(decision.get("gate", {}).get("warnings", []))
+        reduced["record_count"] = decision.get("gate", {}).get(
+            "record_count", len(items))
+        reduced["notes"] = ["evidence set fixed by decision record — engine "
+                            "applied it verbatim and decided nothing"]
+    else:
+        reduced = aggregate_rates(
+            items, outlier_method=config.outlier_method, iqr_k=config.iqr_k,
+            central=config.central, range_basis=config.range_basis,
+            low_pct=config.low_pct, high_pct=config.high_pct,
+            rounding=config.rounding, outlier_action=config.outlier_action,
+            overrides=overrides)
 
     result = {
         "adopted_rate": reduced["adopted"],
