@@ -7,6 +7,8 @@ decisions, no enforced ordering. ``before``/``after`` are deep-copied so later
 mutation of the source cannot alter the recorded event.
 """
 
+import hashlib
+import json
 import uuid
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -76,5 +78,48 @@ def record_event(entity_type: str, entity_id: Optional[str], action: str, *,
         "rationale": rationale,
         "explanation": deepcopy(explanation),
     }
+    _chain(event, store)
     store.append(event)
     return event
+
+
+# ─── SHA-256 hash chain ────────────────────────────────────────────────────────
+
+def _event_digest(event: Dict, prev_hash: Optional[str]) -> str:
+    """SHA-256 over the canonical event payload linked to the previous hash."""
+    payload = {key: value for key, value in event.items()
+               if key not in ("event_hash", "prev_event_hash")}
+    canonical = json.dumps(payload, sort_keys=True, default=str,
+                           ensure_ascii=False)
+    return hashlib.sha256(
+        (prev_hash or "GENESIS").encode("utf-8") + canonical.encode("utf-8")
+    ).hexdigest()
+
+
+def _chain(event: Dict, store: Any) -> None:
+    """Stamp the event with the store's hash chain (tamper-evident)."""
+    prev_hash = getattr(store, "last_event_hash", None)
+    event["prev_event_hash"] = prev_hash
+    event["event_hash"] = _event_digest(event, prev_hash)
+    try:
+        store.last_event_hash = event["event_hash"]
+    except AttributeError:
+        pass  # read-only store: events still carry their own hashes
+
+
+def verify_chain(events: List[Dict]) -> Dict:
+    """Verify a recorded event sequence's SHA-256 chain integrity.
+
+    Returns ``{"valid": bool, "checked": n, "first_invalid": event_id or None}``.
+    Any mutation of a recorded event, or any removal/reordering, breaks the
+    chain at the first affected event.
+    """
+    prev_hash = None
+    for index, event in enumerate(events):
+        expected = _event_digest(event, prev_hash)
+        if event.get("event_hash") != expected \
+                or event.get("prev_event_hash") != prev_hash:
+            return {"valid": False, "checked": index + 1,
+                    "first_invalid": event.get("event_id")}
+        prev_hash = event["event_hash"]
+    return {"valid": True, "checked": len(events), "first_invalid": None}

@@ -172,6 +172,7 @@ class MarketRateConfig:
     """
 
     outlier_method: Union[str, Callable] = "iqr"
+    outlier_action: str = "flag"
     iqr_k: float = 1.5
     central: Union[str, Callable] = "weighted_mean"
     range_basis: str = "percentile"
@@ -212,6 +213,7 @@ class CapRateConfig:
     """
 
     outlier_method: Union[str, Callable] = "iqr"
+    outlier_action: str = "flag"
     iqr_k: float = 1.5
     central: Union[str, Callable] = "weighted_mean"
     range_basis: str = "percentile"

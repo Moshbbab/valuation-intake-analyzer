@@ -57,6 +57,7 @@ def _derive(transaction: Mapping) -> Dict:
 
 def adopted_cap_rate(transactions: Iterable[Mapping], *,
                      config: Optional[CapRateConfig] = None,
+                     overrides: Optional[Mapping] = None,
                      audit_store=None, audit_config=None) -> Dict:
     """Compute an adopted cap-rate range from market yield evidence.
 
@@ -95,13 +96,18 @@ def adopted_cap_rate(transactions: Iterable[Mapping], *,
         items, outlier_method=config.outlier_method, iqr_k=config.iqr_k,
         central=config.central, range_basis=config.range_basis,
         low_pct=config.low_pct, high_pct=config.high_pct,
-        rounding=config.rounding)
+        rounding=config.rounding, outlier_action=config.outlier_action,
+        overrides=overrides)
 
     result = {
         "adopted_cap_rate": reduced["adopted"],
         "statistics": reduced["statistics"],
         "implied_cap_rates": implied,
         "excluded": reduced["excluded"],
+        "outlier_flags": reduced["outlier_flags"],
+        "warnings": reduced["warnings"],
+        "record_count": reduced["record_count"],
+        "overrides_applied": reduced["overrides_applied"],
         "skipped": skipped,
         "notes": reduced["notes"],
         "deliverable": "adopted cap rate",
@@ -128,7 +134,7 @@ def adopted_cap_rate(transactions: Iterable[Mapping], *,
     return result
 
 
-def market_derived_cap_rate(transactions, *, config=None,
+def market_derived_cap_rate(transactions, *, config=None, overrides=None,
                             audit_store=None, audit_config=None):
     """Market Derived Cap Rate Engine entry point.
 
@@ -136,5 +142,5 @@ def market_derived_cap_rate(transactions, *, config=None,
     derives implied cap rates, implied NOI and implied yields from actual
     transactions and recommends an adopted cap-rate range.
     """
-    return adopted_cap_rate(transactions, config=config,
+    return adopted_cap_rate(transactions, config=config, overrides=overrides,
                             audit_store=audit_store, audit_config=audit_config)
