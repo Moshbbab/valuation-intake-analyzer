@@ -58,11 +58,14 @@ def test_market_rate_applies_adjustments():
     assert out["rates"][0]["adjusted_rate"] == pytest.approx(1100)
 
 
-def test_market_rate_excludes_outliers_by_default():
-    # tight cluster + one extreme; IQR should drop the extreme.
+def test_market_rate_flags_outliers_by_default_never_excludes():
+    # tight cluster + one extreme; IQR flags it but does NOT remove it —
+    # exclusion is the appraiser's decision (non-negotiable constraint).
     out = adopted_market_rate(_comps([1000, 1010, 1020, 1030, 1040, 9000]))
-    assert "C-6" in out["excluded"]
-    assert out["statistics"]["count"] == 5
+    assert "C-6" in out["outlier_flags"]
+    assert out["excluded"] == []
+    assert out["statistics"]["count"] == 6
+    assert any("NOT excluded" in w for w in out["warnings"])
 
 
 def test_market_rate_outlier_method_none_keeps_all():

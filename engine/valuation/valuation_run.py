@@ -22,6 +22,8 @@ produced here.
 
 from typing import Dict, List, Mapping, Optional
 
+from engine.audit.config import UNRESTRICTED_CONFIG
+from engine.audit.recorder import record_event
 from engine.valuation.cap_rate import market_derived_cap_rate
 from engine.valuation.comparable_adjustment import adjustment_grid
 from engine.valuation.dcf import discounted_cash_flow
@@ -52,7 +54,10 @@ def _land_approach(subject, evidence, configs, ctx) -> None:
     completed.append("adjustment")
 
     market = adopted_market_rate(grid["adjusted_rates"],
-                                 config=configs.get("market_rate"))
+                                 config=configs.get("market_rate"),
+                                 overrides=(configs.get("market_overrides")),
+                                 audit_store=configs.get("_audit_store"),
+                                 audit_config=configs.get("_audit_config"))
     stages["market_rate"] = market
     summary["adopted_land_rate"] = market["adopted_rate"]
     completed.append("market_rate")
@@ -69,10 +74,10 @@ def _land_approach(subject, evidence, configs, ctx) -> None:
                             "value": lv["land_value"]["base"],
                             "range": {"low": lv["land_value"]["low"],
                                       "high": lv["land_value"]["high"]},
-                            "weight": 1})
+                            "weight": _approach_weight(evidence, "comparable")})
 
 
-def _income_value(noi_value, cap, configs, ctx) -> None:
+def _income_value(noi_value, cap, evidence, _configs, ctx) -> None:
     """NOI / adopted cap rate -> income value range (direct capitalization)."""
     stages, summary, indications, completed = ctx
     if not (_is_number(noi_value) and _is_number(cap["adopted_cap_rate"]["base"])):
@@ -95,7 +100,8 @@ def _income_value(noi_value, cap, configs, ctx) -> None:
     completed.append("direct_capitalization")
     indications.append({"approach": "income", "value": base_value,
                         "range": {"low": income_value["low"],
-                                  "high": income_value["high"]}, "weight": 1})
+                                  "high": income_value["high"]},
+                        "weight": _approach_weight(evidence, "income")})
 
 
 def _income_approach(evidence, configs, ctx):
@@ -110,16 +116,62 @@ def _income_approach(evidence, configs, ctx):
         completed.append("noi")
     if evidence.get("cap_rate_transactions"):
         cap = market_derived_cap_rate(evidence["cap_rate_transactions"],
-                                      config=configs.get("cap_rate"))
+                                      config=configs.get("cap_rate"),
+                                      overrides=configs.get("cap_overrides"),
+                                      audit_store=configs.get("_audit_store"),
+                                      audit_config=configs.get("_audit_config"))
         stages["cap_rate"] = cap
         summary["adopted_cap_rate"] = cap["adopted_cap_rate"]
         completed.append("cap_rate")
-        _income_value(noi_value, cap, configs, ctx)
+        _income_value(noi_value, cap, evidence, configs, ctx)
     return noi_value
 
 
+DEFAULT_WASTING_ASSET_TYPES = ("land", "vacant_land", "plot", "site")
+
+
+def _build_gate(subject: Mapping, stages: Mapping, indications: List,
+                configs: Mapping) -> Dict:
+    """Mandatory pre-output gate: record/outlier/warning counts + guards."""
+    all_warnings: List[str] = []
+
+    # Methodological guard: cap-rate logic on wasting assets (advisory).
+    wasting = configs.get("wasting_asset_types", DEFAULT_WASTING_ASSET_TYPES)
+    asset_type = str(subject.get("asset_type", "")).strip().lower()
+    if asset_type in tuple(wasting) and "direct_capitalization" in stages:
+        all_warnings.append(
+            f"METHODOLOGY WARNING: cap-rate capitalization applied to asset "
+            f"type '{asset_type}' — capitalization logic is not applicable to "
+            "land/wasting assets; appraiser review required")
+
+    record_counts: Dict[str, int] = {}
+    outlier_count = 0
+    for name, stage in stages.items():
+        for warning in stage.get("warnings", []) or []:
+            all_warnings.append(f"[{name}] {warning}")
+        for note in stage.get("notes", []) or []:
+            all_warnings.append(f"[{name}] note: {note}")
+        if "record_count" in stage:
+            record_counts[name] = stage["record_count"]
+        outlier_count += len(stage.get("outlier_flags", []) or [])
+    if not indications:
+        all_warnings.append(
+            "ZERO OUTPUT: no approach produced a value indication — "
+            "reconciliation skipped; supply evidence or review exclusions")
+    return {"record_count": record_counts, "outlier_count": outlier_count,
+            "warnings": all_warnings, "warning_count": len(all_warnings)}
+
+
+def _approach_weight(evidence: Mapping, approach: str) -> float:
+    """Caller-supplied approach weight (appraiser judgment); default 1."""
+    weights = evidence.get("approach_weights") or {}
+    weight = weights.get(approach, 1)
+    return float(weight) if _is_number(weight) else 1.0
+
+
 def run_valuation(subject: Mapping, evidence: Mapping, *,
-                  configs: Optional[Mapping] = None) -> Dict:
+                  configs: Optional[Mapping] = None,
+                  audit_store=None, audit_config=None) -> Dict:
     """Run the full valuation workflow for one subject and return numbers.
 
     ``subject`` carries the subject attributes (``area`` and the fields the
@@ -130,7 +182,9 @@ def run_valuation(subject: Mapping, evidence: Mapping, *,
     headline numbers), ``approach_indications`` and ``stages_completed``. The
     ``appraiser_decision`` is always None — the human adopts the final value.
     """
-    configs = configs or {}
+    configs = dict(configs or {})
+    configs["_audit_store"] = audit_store
+    configs["_audit_config"] = audit_config
     stages: Dict[str, Dict] = {}
     summary: Dict = {}
     indications: List[Dict] = []
@@ -150,7 +204,7 @@ def run_valuation(subject: Mapping, evidence: Mapping, *,
         if _is_number(dcf_result["value_indication"]):
             indications.append({"approach": "dcf",
                                 "value": dcf_result["value_indication"],
-                                "weight": 1})
+                                "weight": _approach_weight(evidence, "dcf")})
 
     # ── Sensitivity ───────────────────────────────────────────────────────────
     sens = evidence.get("sensitivity") or {}
@@ -170,8 +224,11 @@ def run_valuation(subject: Mapping, evidence: Mapping, *,
         summary["approach_agreement_score"] = recon["agreement_score"]
         completed.append("reconciliation")
 
-    return {
+    gate = _build_gate(subject, stages, indications, configs)
+
+    result = {
         "subject_id": subject.get("subject_id"),
+        "gate": gate,
         "stages": stages,
         "value_summary": summary,
         "approach_indications": indications,
@@ -181,3 +238,14 @@ def run_valuation(subject: Mapping, evidence: Mapping, *,
                   "appraiser adopts the final value, which is not produced "
                   "here"),
     }
+
+    if audit_store is not None:
+        record_event(
+            "valuation", subject.get("subject_id"), "valuation_run_completed",
+            before=None,
+            after={"value_summary": summary, "gate": gate,
+                   "stages_completed": completed},
+            rationale="subject valuation run",
+            store=audit_store, config=audit_config or UNRESTRICTED_CONFIG)
+
+    return result

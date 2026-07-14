@@ -39,6 +39,7 @@ def _adjusted_central(comparable: Mapping) -> Optional[float]:
 
 def adopted_market_rate(comparables: Iterable[Mapping], *,
                         config: Optional[MarketRateConfig] = None,
+                        overrides: Optional[Mapping] = None,
                         audit_store=None, audit_config=None) -> Dict:
     """Compute an adopted land rate range from comparable transactions.
 
@@ -76,13 +77,18 @@ def adopted_market_rate(comparables: Iterable[Mapping], *,
         items, outlier_method=config.outlier_method, iqr_k=config.iqr_k,
         central=config.central, range_basis=config.range_basis,
         low_pct=config.low_pct, high_pct=config.high_pct,
-        rounding=config.rounding)
+        rounding=config.rounding, outlier_action=config.outlier_action,
+        overrides=overrides)
 
     result = {
         "adopted_rate": reduced["adopted"],
         "statistics": reduced["statistics"],
         "rates": rates,
         "excluded": reduced["excluded"],
+        "outlier_flags": reduced["outlier_flags"],
+        "warnings": reduced["warnings"],
+        "record_count": reduced["record_count"],
+        "overrides_applied": reduced["overrides_applied"],
         "skipped": skipped,
         "notes": reduced["notes"],
         "deliverable": "adopted land rate range",
