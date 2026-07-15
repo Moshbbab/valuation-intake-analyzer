@@ -101,22 +101,27 @@ def _build_patterns_map() -> Dict[str, List[str]]:
     return {
         "property_type": [
             r"property[\s_-]*type[:\s]+(?P<value>[^\n]+)",
+            r"نوع[\s_-]*العقار[:\s]+(?P<value>[^\n]+)",
         ],
         "property_location": [
             r"property[\s_-]*location[:\s]+(?P<value>[^\n]+)",
             r"location[:\s]+(?P<value>[^\n]+)",
+            r"موقع[\s_-]*العقار[:\s]+(?P<value>[^\n]+)",
         ],
         "valuation_purpose": [
             r"valuation[\s_-]*purpose[:\s]+(?P<value>[^\n]+)",
             r"purpose[:\s]+(?P<value>[^\n]+)",
+            r"غرض[\s_-]*التقييم[:\s]+(?P<value>[^\n]+)",
         ],
         "basis_of_value": [
             r"basis[\s_-]*of[\s_-]*value[:\s]+(?P<value>[^\n]+)",
             r"basis[:\s]+(?P<value>[^\n]+)",
+            r"أساس[\s_-]*القيمة[:\s]+(?P<value>[^\n]+)",
         ],
         "valuation_date": [
             r"valuation[\s_-]*date[:\s]+(?P<value>[^\n]+)",
             r"date[:\s]+(?P<value>[^\n]+)",
+            r"تاريخ[\s_-]*التقييم[:\s]+(?P<value>[^\n]+)",
         ],
         "client_name": [
             r"client[\s_-]*name[:\s]+(?P<value>[^\n]+)",
