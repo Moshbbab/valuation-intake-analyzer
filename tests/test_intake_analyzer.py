@@ -32,6 +32,25 @@ def test_parse_intake_all_fields_present():
     assert result["valuation_date"]["value"] != "Not stated"
 
 
+def test_parse_intake_extracts_core_fields_from_arabic_labels():
+    """Core intake fields are extracted from common Arabic labels."""
+    sample = """
+    نوع العقار: فيلا سكنية
+    موقع العقار: الرياض، حي النخيل
+    غرض التقييم: التمويل العقاري
+    أساس القيمة: القيمة السوقية
+    تاريخ التقييم: 15 يوليو 2026
+    """
+
+    result = parse_intake(sample)
+
+    assert result["property_type"]["value"] == "فيلا سكنية"
+    assert result["property_location"]["value"] == "الرياض، حي النخيل"
+    assert result["valuation_purpose"]["value"] == "التمويل العقاري"
+    assert result["basis_of_value"]["value"] == "القيمة السوقية"
+    assert result["valuation_date"]["value"] == "15 يوليو 2026"
+
+
 def test_parse_intake_missing_fields():
     """Missing fields are reported as 'Not stated'."""
     result = parse_intake("This is a document with no structured fields.")
