@@ -25,6 +25,10 @@ Upload a valuation request in PDF, Word (.docx), or plain text format. The tool 
    - Initial Risk Flags
    - Readiness Assessment (Ready / Partially Ready / Not Ready)
 
+   Common English and Arabic labels are supported for the five core fields:
+   Property Type, Property Location, Valuation Purpose, Basis of Value, and
+   Valuation Date.
+
 2. Display a structured summary panel showing facts, assumptions, and inferences separately.
 3. Provide a download button for the generated report as a JSON file.
 
