@@ -188,16 +188,14 @@ def _extract_missing_documents(text: str) -> Dict[str, str]:
 
 
 def _extract_assumptions(text: str) -> Dict[str, str]:
-    """Extract initial assumptions from text."""
-    pattern = r"assumptions?[:\s]+(?P<value>[^\n]+)"
-    assumptions = [
-        m.group("value").strip()
-        for m in re.finditer(pattern, text, re.IGNORECASE)
-    ]
-    evidence = "; ".join(
-        m.group(0).strip()
-        for m in re.finditer(pattern, text, re.IGNORECASE)
+    """Extract general assumptions without duplicating special assumptions."""
+    pattern = (
+        r"^[ \t]*(?!special[\s_-]*assumptions?\b)"
+        r"assumptions?[ \t]*:[ \t]*(?P<value>[^\n]+)"
     )
+    matches = list(re.finditer(pattern, text, re.IGNORECASE | re.MULTILINE))
+    assumptions = [match.group("value").strip() for match in matches]
+    evidence = "; ".join(match.group(0).strip() for match in matches)
     return {
         "value": "; ".join(assumptions) if assumptions else "None stated",
         "evidence": evidence,
