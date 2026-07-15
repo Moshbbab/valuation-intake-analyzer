@@ -114,6 +114,25 @@ def test_special_assumptions_extracted():
     assert "vacant" in result["special_assumptions"]["value"].lower()
 
 
+def test_special_assumptions_do_not_leak_into_general_assumptions():
+    """A special assumption must not be duplicated as a general assumption."""
+    sample = "Special Assumptions: Vacant possession assumed\nProperty Type: Land"
+    result = parse_intake(sample)
+    assert result["special_assumptions"]["value"] == "Vacant possession assumed"
+    assert result["initial_assumptions"]["value"] == "None stated"
+
+
+def test_general_and_special_assumptions_remain_separate():
+    """General and special assumptions retain their own evidence and values."""
+    sample = (
+        "Assumptions: Title is free from encumbrances\n"
+        "Special Assumptions: Vacant possession assumed\n"
+    )
+    result = parse_intake(sample)
+    assert result["initial_assumptions"]["value"] == "Title is free from encumbrances"
+    assert result["special_assumptions"]["value"] == "Vacant possession assumed"
+
+
 def test_special_assumptions_none():
     """Special assumptions are None stated when absent."""
     result = parse_intake("Property Type: Office\nValuation Date: 2025-01-01")
@@ -158,7 +177,7 @@ def test_market_evidence_count_not_stated():
     assert result["market_evidence_count"]["value"] == "Not stated"
 
 
-# ─── Data Gate ───────────────────────────────────────────────────────────────
+# ─── Data Gate ────────────────────────────────────────────────────────────────
 
 def test_data_gate_returns_five_items():
     """assess_data_gate always returns exactly 5 items (A1–A5)."""
