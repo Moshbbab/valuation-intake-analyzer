@@ -177,7 +177,7 @@ def test_market_evidence_count_not_stated():
     assert result["market_evidence_count"]["value"] == "Not stated"
 
 
-# ─── Data Gate ────────────────────────────────────────────────────────────────
+# ─── Data Gate ───────────────────────────────────────────────────────────────
 
 def test_data_gate_returns_five_items():
     """assess_data_gate always returns exactly 5 items (A1–A5)."""
